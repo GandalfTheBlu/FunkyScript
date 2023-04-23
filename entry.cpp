@@ -65,14 +65,11 @@ struct Data
 	bool isConst;
 	Token token;
 
-	Data(DataType _type, bool _isConst, int row, int col, int index, SourceCode* sourceCodePtr)
+	Data(DataType _type, bool _isConst, const Token& _token)
 	{
 		type = _type;
 		isConst = _isConst;
-		token.row = row;
-		token.col = col;
-		token.index = index;
-		token.sourceCodePtr = sourceCodePtr;
+		token = _token;
 	}
 
 	virtual ~Data(){}
@@ -132,8 +129,8 @@ struct Value : public Data
 	T* valuePtr;
 	int* users;
 
-	Value(DataType _type, bool _isConst, int row, int col, int index, SourceCode* sourceCodePtr) :
-		Data(_type, _isConst, row, col, index, sourceCodePtr)
+	Value(DataType _type, bool _isConst, const Token& _token) :
+		Data(_type, _isConst, _token)
 	{
 		valuePtr = nullptr;
 		users = nullptr;
@@ -162,7 +159,7 @@ struct Value : public Data
 
 	virtual void CreateSameType(Data*& inOutData) override
 	{
-		inOutData = new Value<T>(type, false, token.row, token.col, token.index, token.sourceCodePtr);
+		inOutData = new Value<T>(type, false, token);
 	}
 
 	virtual Data* Evaluate() override
@@ -458,6 +455,16 @@ struct Function
 
 		variables.clear();
 	}
+
+	bool CheckArgumens(int count)
+	{
+		if (arguments.size() < count)
+		{
+			LogError("too few arguments sent to function");
+			return false;
+		}
+		return true;
+	}
 };
 
 
@@ -575,6 +582,7 @@ bool SourceCode::BeginsWith(const std::string& str)
 std::unordered_map<std::string, void(*)(List&)> scriptFunctions;
 
 #define SCRIPT_FUNCTION(name, body) scriptFunctions[name] = [](List& args)body;
+#define AFFIRM_DATA(data) if(data == nullptr){return;}
 
 struct FunctionLibrary
 {
@@ -683,26 +691,46 @@ struct FunctionLibrary
 	static void F_Print(Function* self)
 	{
 		for (auto& arg : self->arguments)
-			Helper_PrintAny(arg->Evaluate());
+		{
+			Data* res = arg->Evaluate();
+			AFFIRM_DATA(res)
+
+			Helper_PrintAny(res);
+		}
 	}
 
 	static void F_ReturnCopy(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* ret = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(ret)
+
 		ret->CreateSameType(self->parent->returnValue);
 		self->parent->returnValue->CopyOther(ret);
 	}
 
 	static void F_ReturnReference(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* ret = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(ret)
+
 		ret->CreateSameType(self->parent->returnValue);
 		self->parent->returnValue->ReferenceOther(ret);
 	}
 
 	static void F_SetCopy(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::String)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected variable name (string)");
@@ -711,6 +739,8 @@ struct FunctionLibrary
 
 		Value<String>* name = dynamic_cast<Value<String>*>(first);
 		Data* data = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(data)
+
 		Data* current = nullptr;
 
 		if (self->GetVariable(*name->valuePtr, current))
@@ -727,7 +757,12 @@ struct FunctionLibrary
 
 	static void F_SetReference(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::String)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected variable name (string)");
@@ -736,6 +771,8 @@ struct FunctionLibrary
 
 		Value<String>* name = dynamic_cast<Value<String>*>(first);
 		Data* data = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(data)
+
 		Data* current = nullptr;
 
 		if (self->GetVariable(*name->valuePtr, current))
@@ -752,7 +789,12 @@ struct FunctionLibrary
 
 	static void F_AddElementsAsCopies(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::List && first->type != DataType::Map)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
@@ -771,6 +813,8 @@ struct FunctionLibrary
 			{
 				Data* copy = nullptr;
 				Data* val = self->arguments[i]->Evaluate();
+				AFFIRM_DATA(val)
+
 				val->CreateSameType(copy);
 				copy->CopyOther(val);
 				list->valuePtr->push_back(copy);
@@ -783,13 +827,18 @@ struct FunctionLibrary
 			{
 				Data* copy = nullptr;
 				Data* key = self->arguments[i]->Evaluate();
+				AFFIRM_DATA(key)
+
 				if (key->type != DataType::String)
 				{
 					key->token.sourceCodePtr->PrintError(key->token, "expected string as key");
 					return;
 				}
+
 				Value<String>* keyStr = dynamic_cast<Value<String>*>(key);
 				Data* val = self->arguments[i+1]->Evaluate();
+				AFFIRM_DATA(val)
+
 				val->CreateSameType(copy);
 				copy->CopyOther(val);
 				map->valuePtr->insert({ *keyStr->valuePtr, copy });
@@ -799,7 +848,12 @@ struct FunctionLibrary
 
 	static void F_AddElementsAsReferences(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::List && first->type != DataType::Map)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
@@ -818,6 +872,8 @@ struct FunctionLibrary
 			{
 				Data* copy = nullptr;
 				Data* val = self->arguments[i]->Evaluate();
+				AFFIRM_DATA(val)
+
 				val->CreateSameType(copy);
 				copy->ReferenceOther(val);
 				list->valuePtr->push_back(copy);
@@ -830,13 +886,18 @@ struct FunctionLibrary
 			{
 				Data* copy = nullptr;
 				Data* key = self->arguments[i]->Evaluate();
+				AFFIRM_DATA(key)
+
 				if (key->type != DataType::String)
 				{
 					key->token.sourceCodePtr->PrintError(key->token, "expected string as key");
 					return;
 				}
+
 				Value<String>* keyStr = dynamic_cast<Value<String>*>(key);
 				Data* val = self->arguments[i + 1]->Evaluate();
+				AFFIRM_DATA(val)
+
 				val->CreateSameType(copy);
 				copy->ReferenceOther(val);
 				map->valuePtr->insert({ *keyStr->valuePtr, copy });
@@ -846,7 +907,12 @@ struct FunctionLibrary
 
 	static void F_GetElement(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::List && first->type != DataType::Map)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
@@ -854,6 +920,8 @@ struct FunctionLibrary
 		}
 
 		Data* second = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(second)
+
 		if (first->type == DataType::List)
 		{
 			if (!second->AffirmSameType(DataType::Int))
@@ -902,7 +970,12 @@ struct FunctionLibrary
 
 	static void F_RemoveElement(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::List && first->type != DataType::Map)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
@@ -910,6 +983,8 @@ struct FunctionLibrary
 		}
 
 		Data* second = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(second)
+
 		if (first->type == DataType::List)
 		{
 			if (!second->AffirmSameType(DataType::Int))
@@ -956,7 +1031,12 @@ struct FunctionLibrary
 
 	static void F_DefineFunction(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::String)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected variable name (string)");
@@ -975,7 +1055,12 @@ struct FunctionLibrary
 
 	static void F_GetVariable(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::String)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected variable name (string)");
@@ -997,6 +1082,8 @@ struct FunctionLibrary
 			for (int i = 1; i+1 < self->arguments.size(); i+=2)
 			{
 				Data* name = self->arguments[i]->Evaluate();
+				AFFIRM_DATA(name)
+
 				if (name->type != DataType::String)
 				{
 					name->token.sourceCodePtr->PrintError(name->token, "expected argument name (string)");
@@ -1005,6 +1092,8 @@ struct FunctionLibrary
 
 				Value<String>* name_str = dynamic_cast<Value<String>*>(name);
 				Data* arg = self->arguments[i+1]->Evaluate();
+				AFFIRM_DATA(arg)
+
 				Data* argRef = nullptr;
 				arg->CreateSameType(argRef);
 				argRef->ReferenceOther(arg);
@@ -1022,7 +1111,12 @@ struct FunctionLibrary
 
 	static void F_If(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* condition = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(condition)
+
 		if (condition->type != DataType::Bool)
 		{
 			condition->token.sourceCodePtr->PrintError(condition->token, "expected boolean");
@@ -1050,7 +1144,12 @@ struct FunctionLibrary
 
 	static void F_While(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		Data* condition = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(condition)
+
 		if (condition->type != DataType::Bool)
 		{
 			condition->token.sourceCodePtr->PrintError(condition->token, "expected boolean");
@@ -1071,6 +1170,8 @@ struct FunctionLibrary
 			}
 
 			condition = self->arguments[0]->Evaluate();
+			AFFIRM_DATA(condition)
+
 			if (condition->type != DataType::Bool)
 			{
 				condition->token.sourceCodePtr->PrintError(condition->token, "expected boolean");
@@ -1083,7 +1184,12 @@ struct FunctionLibrary
 
 	static void F_ToString(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* data = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(data)
+
 		std::string str;
 		if (data->type == DataType::Bool)
 		{
@@ -1106,7 +1212,7 @@ struct FunctionLibrary
 			return;
 		}
 
-		Value<String>* str_val = new Value<String>(DataType::String, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		Value<String>* str_val = new Value<String>(DataType::String, false, data->token);
 		str_val->SetValue(str);
 		self->returnValue = str_val;
 	}
@@ -1139,7 +1245,12 @@ struct FunctionLibrary
 
 	static void F_ToInt(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* data = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(data)
+
 		int i;
 		if (data->type == DataType::String)
 		{
@@ -1162,14 +1273,19 @@ struct FunctionLibrary
 			return;
 		}
 
-		Value<Int>* int_val = new Value<Int>(DataType::Int, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		Value<Int>* int_val = new Value<Int>(DataType::Int, false, data->token);
 		int_val->SetValue(i);
 		self->returnValue = int_val;
 	}
 
 	static void F_ToFloat(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* data = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(data)
+
 		float f;
 		if (data->type == DataType::String)
 		{
@@ -1192,16 +1308,22 @@ struct FunctionLibrary
 			return;
 		}
 
-		Value<Float>* float_val = new Value<Float>(DataType::Float, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		Value<Float>* float_val = new Value<Float>(DataType::Float, false, data->token);
 		float_val->SetValue(f);
 		self->returnValue = float_val;
 	}
 
 	static void F_Add(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float && t != DataType::String))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1213,7 +1335,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Float>* sum = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Float>* sum = new Value<Float>(DataType::Float, false, f_left->token);
 			sum->SetValue(*f_left->valuePtr + *f_right->valuePtr);
 			self->returnValue = sum;
 		}
@@ -1222,7 +1344,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Int>* sum = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Int>* sum = new Value<Int>(DataType::Int, false, i_left->token);
 			sum->SetValue(*i_left->valuePtr + *i_right->valuePtr);
 			self->returnValue = sum;
 		}
@@ -1231,7 +1353,7 @@ struct FunctionLibrary
 			Value<String>* s_left = dynamic_cast<Value<String>*>(left);
 			Value<String>* s_right = dynamic_cast<Value<String>*>(right);
 
-			Value<String>* sum = new Value<String>(DataType::String, false, s_left->token.row, s_left->token.col, s_left->token.index, s_left->token.sourceCodePtr);
+			Value<String>* sum = new Value<String>(DataType::String, false, s_left->token);
 			sum->SetValue(*s_left->valuePtr + *s_right->valuePtr);
 			self->returnValue = sum;
 		}
@@ -1239,9 +1361,15 @@ struct FunctionLibrary
 
 	static void F_Sub(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1253,7 +1381,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Float>* dif = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Float>* dif = new Value<Float>(DataType::Float, false, f_left->token);
 			dif->SetValue(*f_left->valuePtr - *f_right->valuePtr);
 			self->returnValue = dif;
 		}
@@ -1262,7 +1390,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Int>* dif = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Int>* dif = new Value<Int>(DataType::Int, false, i_left->token);
 			dif->SetValue(*i_left->valuePtr - *i_right->valuePtr);
 			self->returnValue = dif;
 		}
@@ -1270,9 +1398,15 @@ struct FunctionLibrary
 
 	static void F_Mult(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1284,7 +1418,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Float>* prod = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Float>* prod = new Value<Float>(DataType::Float, false, f_left->token);
 			prod->SetValue(*f_left->valuePtr * *f_right->valuePtr);
 			self->returnValue = prod;
 		}
@@ -1293,7 +1427,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Int>* prod = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Int>* prod = new Value<Int>(DataType::Int, false, i_left->token);
 			prod->SetValue(*i_left->valuePtr * *i_right->valuePtr);
 			self->returnValue = prod;
 		}
@@ -1301,9 +1435,15 @@ struct FunctionLibrary
 
 	static void F_Div(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1315,7 +1455,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Float>* quota = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Float>* quota = new Value<Float>(DataType::Float, false, f_left->token);
 			quota->SetValue(*f_left->valuePtr / *f_right->valuePtr);
 			self->returnValue = quota;
 		}
@@ -1324,7 +1464,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Int>* quota = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Int>* quota = new Value<Int>(DataType::Int, false, i_left->token);
 			quota->SetValue(*i_left->valuePtr / *i_right->valuePtr);
 			self->returnValue = quota;
 		}
@@ -1332,9 +1472,15 @@ struct FunctionLibrary
 
 	static void F_Less(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1346,7 +1492,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, f_left->token);
 			comp->SetValue(*f_left->valuePtr < *f_right->valuePtr);
 			self->returnValue = comp;
 		}
@@ -1355,7 +1501,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, i_left->token);
 			comp->SetValue(*i_left->valuePtr < *i_right->valuePtr);
 			self->returnValue = comp;
 		}
@@ -1363,9 +1509,15 @@ struct FunctionLibrary
 
 	static void F_Equal(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float && t != DataType::String))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
@@ -1377,7 +1529,7 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, f_left->token);
 			comp->SetValue(*f_left->valuePtr == *f_right->valuePtr);
 			self->returnValue = comp;
 		}
@@ -1386,7 +1538,7 @@ struct FunctionLibrary
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, i_left->token);
 			comp->SetValue(*i_left->valuePtr == *i_right->valuePtr);
 			self->returnValue = comp;
 		}
@@ -1395,7 +1547,7 @@ struct FunctionLibrary
 			Value<String>* s_left = dynamic_cast<Value<String>*>(left);
 			Value<String>* s_right = dynamic_cast<Value<String>*>(right);
 
-			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, s_left->token.row, s_left->token.col, s_left->token.index, s_left->token.sourceCodePtr);
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, s_left->token);
 			comp->SetValue(*s_left->valuePtr == *s_right->valuePtr);
 			self->returnValue = comp;
 		}
@@ -1403,9 +1555,15 @@ struct FunctionLibrary
 
 	static void F_And(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || t != DataType::Bool)
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "expected bool");
@@ -1415,16 +1573,22 @@ struct FunctionLibrary
 		Value<Bool>* b_left = dynamic_cast<Value<Bool>*>(left);
 		Value<Bool>* b_right = dynamic_cast<Value<Bool>*>(right);
 
-		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token.row, b_left->token.col, b_left->token.index, b_left->token.sourceCodePtr);
+		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token);
 		comp->SetValue(*b_left->valuePtr && *b_right->valuePtr);
 		self->returnValue = comp;
 	}
 
 	static void F_Or(Function* self)
 	{
+		if (!self->CheckArgumens(2))
+			return;
+
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(left)
 		Data* right = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(right)
+
 		if ((t = left->type) != right->type || t != DataType::Bool)
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "expected bool");
@@ -1434,14 +1598,19 @@ struct FunctionLibrary
 		Value<Bool>* b_left = dynamic_cast<Value<Bool>*>(left);
 		Value<Bool>* b_right = dynamic_cast<Value<Bool>*>(right);
 
-		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token.row, b_left->token.col, b_left->token.index, b_left->token.sourceCodePtr);
+		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token);
 		comp->SetValue(*b_left->valuePtr || *b_right->valuePtr);
 		self->returnValue = comp;
 	}
 
 	static void F_Not(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::Bool)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected bool");
@@ -1450,14 +1619,19 @@ struct FunctionLibrary
 
 		Value<Bool>* b = dynamic_cast<Value<Bool>*>(first);
 
-		Value<Bool>* b_not = new Value<Bool>(DataType::Bool, false, b->token.row, b->token.col, b->token.index, b->token.sourceCodePtr);
+		Value<Bool>* b_not = new Value<Bool>(DataType::Bool, false, b->token);
 		b_not->SetValue(!*b->valuePtr);
 		self->returnValue = b_not;
 	}
 
 	static void F_Count(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::List)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list");
@@ -1465,14 +1639,19 @@ struct FunctionLibrary
 		}
 
 		Value<List>* list = dynamic_cast<Value<List>*>(first);
-		Value<Int>* count = new Value<Int>(DataType::Int, false, first->token.row, first->token.col, first->token.index, first->token.sourceCodePtr);
+		Value<Int>* count = new Value<Int>(DataType::Int, false, first->token);
 		count->SetValue((int)list->valuePtr->size());
 		self->returnValue = count;
 	}
 
 	static void F_Keys(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::Map)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected map");
@@ -1480,12 +1659,12 @@ struct FunctionLibrary
 		}
 
 		Value<Map>* map = dynamic_cast<Value<Map>*>(first);
-		Value<List>* list = new Value<List>(DataType::List, false, first->token.row, first->token.col, first->token.index, first->token.sourceCodePtr);
+		Value<List>* list = new Value<List>(DataType::List, false, first->token);
 		list->Init();
 
 		for (auto& e : map->valuePtr->map)
 		{
-			Value<String>* key = new Value<String>(DataType::String, false, first->token.row, first->token.col, first->token.index, first->token.sourceCodePtr);
+			Value<String>* key = new Value<String>(DataType::String, false, first->token);
 			key->SetValue(e.first);
 			list->valuePtr->push_back(key);
 		}
@@ -1495,7 +1674,12 @@ struct FunctionLibrary
 
 	static void F_CallCPPFunction(Function* self)
 	{
+		if (!self->CheckArgumens(1))
+			return;
+
 		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->type != DataType::String)
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected function name (string)");
@@ -1514,6 +1698,8 @@ struct FunctionLibrary
 		{
 			Data* argRef = nullptr;
 			Data* arg = self->arguments[i]->Evaluate();
+			AFFIRM_DATA(arg)
+
 			arg->CreateSameType(argRef);
 			argRef->ReferenceOther(arg);
 			args.push_back(argRef);
@@ -1587,6 +1773,7 @@ struct Script
 	{
 		Token unknownToken;
 		std::string unknown;
+		int lastUnknownCharIndex = 0;
 
 		while (maxIndex == -1 || sourceCode.index <= maxIndex)
 		{
@@ -1608,7 +1795,7 @@ struct Script
 				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '"';);
 				int last = sourceCode.index;
 
-				Value<String>* val = new Value<String>(DataType::String, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+				Value<String>* val = new Value<String>(DataType::String, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 				val->SetValue(sourceCode.Substring(first + 1, last - 1));
 				sourceCode.NextChar();
 
@@ -1648,14 +1835,14 @@ struct Script
 
 				if (isFloat)
 				{
-					Value<Float>* val = new Value<Float>(DataType::Float, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+					Value<Float>* val = new Value<Float>(DataType::Float, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 					val->SetValue(std::stof(num));
 					outData = val;
 					return true;
 				}
 				else
 				{
-					Value<Int>* val = new Value<Int>(DataType::Int, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+					Value<Int>* val = new Value<Int>(DataType::Int, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 					val->SetValue(std::stoi(num));
 					outData = val;
 					return true;
@@ -1663,7 +1850,7 @@ struct Script
 			}
 			else if (sourceCode.BeginsWith("true"))
 			{
-				Value<Bool>* val = new Value<Bool>(DataType::Bool, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+				Value<Bool>* val = new Value<Bool>(DataType::Bool, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 				val->SetValue(true);
 				sourceCode.MoveAlong(4);
 				outData = val;
@@ -1671,7 +1858,7 @@ struct Script
 			}
 			else if (sourceCode.BeginsWith("false"))
 			{
-				Value<Bool>* val = new Value<Bool>(DataType::Bool, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+				Value<Bool>* val = new Value<Bool>(DataType::Bool, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 				val->SetValue(false);
 				sourceCode.MoveAlong(5);
 				outData = val;
@@ -1679,7 +1866,7 @@ struct Script
 			}
 			else if (sourceCode.BeginsWith("list"))
 			{
-				Value<List>* val = new Value<List>(DataType::List, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+				Value<List>* val = new Value<List>(DataType::List, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 				val->SetValue({});
 				sourceCode.MoveAlong(4);
 				outData = val;
@@ -1687,7 +1874,7 @@ struct Script
 			}
 			else if (sourceCode.BeginsWith("map"))
 			{
-				Value<Map>* val = new Value<Map>(DataType::Map, true, sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode);
+				Value<Map>* val = new Value<Map>(DataType::Map, true, { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode });
 				val->SetValue({});
 				sourceCode.MoveAlong(3);
 				outData = val;
@@ -1701,7 +1888,7 @@ struct Script
 					return false;
 				}
 
-				Value<Function>* val = new Value<Function>(DataType::Function, true, unknownToken.row, unknownToken.col, unknownToken.index, &sourceCode);
+				Value<Function>* val = new Value<Function>(DataType::Function, true, unknownToken);
 				val->SetValue(functionLibrary.functions[unknown]);
 
 				for (; c != '(' && sourceCode.NextChar() && IsWhitespace(c = sourceCode.CurrentChar()););
@@ -1749,7 +1936,13 @@ struct Script
 			{
 				if (unknown.size() == 0)
 					unknownToken = { sourceCode.row, sourceCode.col, sourceCode.index, &sourceCode };
+				else if (sourceCode.index > lastUnknownCharIndex+1)
+				{
+					sourceCode.PrintError(unknownToken, "unexpected " + unknown);
+					return false;
+				}
 
+				lastUnknownCharIndex = sourceCode.index;
 				unknown += c;
 			}
 
