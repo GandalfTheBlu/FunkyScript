@@ -1,38 +1,60 @@
 
 do
 (
-	// create some maps
-	set_copy("map" map)
-	push_copy(get("map") "first" 1 "second" 2 "third" 3)
-	set_copy("map2" map)
-	push_copy(get("map2") "ree" true "bro" 3.1415 "skidadel" list)
-	// get reference to the list element in the map
-	set_ref("l" get_elem(get("map2") "skidadel"))
-	// add some numbers to that list
-	push_copy(get("l") 1 2 3 4 5)
-	
-	// define function
-	// use .name for local variables and #name for arguments
-	// to not collide with external variables
-	def("log_map" function(//arguments: #map
-		// get keys from map
-		set_ref(".keys" keys(get("#map")))
-		// loop through each key
-		set_copy(".i" 0)
-		while(less(get(".i") count(get(".keys"))) do(
-			// get key from list
-			set_ref(".key" get_elem(get(".keys") get(".i")))
-			// print key and value
-			print(get(".key") ": " get_elem(get("#map") get(".key")) "\n")
-			// increment i
-			set_copy(".i" add(get(".i") 1))
-		))
+	def("++" function(//#i
+		set_copy("#i" add(get("#i") 1))
 	))
 	
-	print(get("map") "\n\n")
-	// call function log_map with the argument "#map" set to variable "map"
-	get("log_map" "#map" get("map"))
+	set_copy("f" 2)
+	set_copy("i" 0)
+	while(less(get("i") 10) do(
+		set_copy("f" mult(get("f") 2))
+		print(get("i") ": " get("f") "\n")
+		get("++" "#i" get("i"))
+	))
 	
-	print("\n" get("map2") "\n\n")
-	get("log_map" "#map" get("map2"))
+	print(sub(30 10) " " div(10 2) "\n")
+	print(add(to_int("12") 2) "\n")
+	print(add(to_float("3.14") 0.001592) "\n")
+	
+	if(or(true false) do(
+		print("bruh\n")
+		if(and(false true) do(
+			print("no")
+		) if(not(false) do(
+			print("yes\n")
+		)))
+	))
+	
+	if(equal("123" to_string(123)) 
+		print("yoooo!\n")
+	)
+	
+	def("vec3" function(// #x #y #z
+		set_copy(".vec" list)
+		push_copy(get(".vec") get("#x") get("#y") get("#z"))
+		return_copy(get(".vec"))
+	))
+	
+	set_ref("v1" get("vec3" "#x" 1 "#y" 2 "#z" 3))
+	print(get("v1"))
+	
+	
+	def("object" function(// #name #pos #vel
+		set_copy(".obj" map)
+		push_copy(get(".obj") 
+			"name" get("#name")
+			"pos" get("#pos")
+			"vel" get("#vel")
+		)
+		return_copy(get(".obj"))
+	))
+	
+	set_ref("obj" get("object" 
+		"#name" "Greg" 
+		"#pos" get("vec3" "#x" 2 "#y" 4 "#z" -5)
+		"#vel" get("vec3" "#x" -1.2 "#y" -4.2 "#z" 5.4)
+	))
+	
+	print("\n" get("obj") "\n")
 )

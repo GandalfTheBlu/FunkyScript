@@ -243,7 +243,27 @@ struct List
 
 	List(const List& other)
 	{
-		list = other.list;
+		list.reserve(other.list.size());
+		for (auto& elem : other.list)
+		{
+			Data* copy = nullptr;
+			elem->CreateSameType(copy);
+			copy->ReferenceOther(elem);
+			list.push_back(copy);
+		}
+	}
+
+	List& operator=(const List& other)
+	{
+		list.reserve(other.list.size());
+		for (auto& elem : other.list)
+		{
+			Data* copy = nullptr;
+			elem->CreateSameType(copy);
+			copy->ReferenceOther(elem);
+			list.push_back(copy);
+		}
+		return *this;
 	}
 
 	~List()
@@ -291,7 +311,27 @@ struct Map
 
 	Map(const Map& other)
 	{
-		map = other.map;
+		map.reserve(other.map.size());
+		for (auto& elem : other.map)
+		{
+			Data* copy = nullptr;
+			elem.second->CreateSameType(copy);
+			copy->ReferenceOther(elem.second);
+			map[elem.first] = copy;
+		}
+	}
+
+	Map& operator=(const Map& other)
+	{
+		map.reserve(other.map.size());
+		for (auto& elem : other.map)
+		{
+			Data* copy = nullptr;
+			elem.second->CreateSameType(copy);
+			copy->ReferenceOther(elem.second);
+			map[elem.first] = copy;
+		}
+		return *this;
 	}
 
 	~Map()
@@ -618,7 +658,7 @@ struct FunctionLibrary
 			if (i > 0)
 				std::cout << ", ";
 
-			std::cout << "{" << e.first << ", ";
+			std::cout << "{" << e.first << ": ";
 			Helper_PrintAny(e.second);
 			std::cout << "}";
 			i++;
@@ -994,13 +1034,17 @@ struct FunctionLibrary
 		if (*val->valuePtr)
 		{
 			self->arguments[1]->Evaluate();
+		}
+		else if (self->arguments.size() == 3)
+		{
+			self->arguments[2]->Evaluate();
+		}
 
-			if (self->returnValue != nullptr && self->parent != nullptr)
-			{
-				self->returnValue->CreateSameType(self->parent->returnValue);
-				self->parent->returnValue->ReferenceOther(self->returnValue);
-				return;
-			}
+		if (self->returnValue != nullptr && self->parent != nullptr)
+		{
+			self->returnValue->CreateSameType(self->parent->returnValue);
+			self->parent->returnValue->ReferenceOther(self->returnValue);
+			return;
 		}
 	}
 
@@ -1037,7 +1081,163 @@ struct FunctionLibrary
 		}
 	}
 
+	static void F_ToString(Function* self)
+	{
+		Data* data = self->arguments[0]->Evaluate();
+		std::string str;
+		if (data->type == DataType::Bool)
+		{
+			Value<Bool>* b = dynamic_cast<Value<Bool>*>(data);
+			str = *b->valuePtr ? "true" : "false";
+		}
+		else if (data->type == DataType::Int)
+		{
+			Value<Int>* i = dynamic_cast<Value<Int>*>(data);
+			str = std::to_string(*i->valuePtr);
+		}
+		else if (data->type == DataType::Float)
+		{
+			Value<Float>* f = dynamic_cast<Value<Float>*>(data);
+			str = std::to_string(*f->valuePtr);
+		}
+		else
+		{
+			data->token.sourceCodePtr->PrintError(data->token, "expected bool, int or float");
+			return;
+		}
+
+		Value<String>* str_val = new Value<String>(DataType::String, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		str_val->SetValue(str);
+		self->returnValue = str_val;
+	}
+
+	static bool Helper_IsInt(const std::string& str)
+	{
+		for (int i = 0; i < str.size(); i++)
+		{
+			char c = str[i];
+			if ((c == '-' && i != 0) || c < '0' || c > '9')
+				return false;
+		}
+		return true;
+	}
+
+	static bool Helper_IsFloat(const std::string& str)
+	{
+		bool hasDot = false;
+		for (int i = 0; i < str.size(); i++)
+		{
+			char c = str[i];
+			bool isDot = c == '.';
+			if ((c == '-' && i != 0) || (!isDot && (c < '0' || c > '9')) || (hasDot && isDot))
+				return false;
+
+			hasDot |= isDot;
+		}
+		return true;
+	}
+
+	static void F_ToInt(Function* self)
+	{
+		Data* data = self->arguments[0]->Evaluate();
+		int i;
+		if (data->type == DataType::String)
+		{
+			Value<String>* s = dynamic_cast<Value<String>*>(data);
+			if (!Helper_IsInt(*s->valuePtr))
+			{
+				data->token.sourceCodePtr->PrintError(data->token, "failed to convert string into int");
+				return;
+			}
+			i = std::stoi(*s->valuePtr);
+		}
+		else if (data->type == DataType::Float)
+		{
+			Value<Float>* f = dynamic_cast<Value<Float>*>(data);
+			i = (int)*f->valuePtr;
+		}
+		else
+		{
+			data->token.sourceCodePtr->PrintError(data->token, "expected string or float");
+			return;
+		}
+
+		Value<Int>* int_val = new Value<Int>(DataType::Int, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		int_val->SetValue(i);
+		self->returnValue = int_val;
+	}
+
+	static void F_ToFloat(Function* self)
+	{
+		Data* data = self->arguments[0]->Evaluate();
+		float f;
+		if (data->type == DataType::String)
+		{
+			Value<String>* s = dynamic_cast<Value<String>*>(data);
+			if (!Helper_IsFloat(*s->valuePtr))
+			{
+				data->token.sourceCodePtr->PrintError(data->token, "failed to convert string into float");
+				return;
+			}
+			f = std::stof(*s->valuePtr);
+		}
+		else if (data->type == DataType::Int)
+		{
+			Value<Int>* i = dynamic_cast<Value<Int>*>(data);
+			f = (float)*i->valuePtr;
+		}
+		else
+		{
+			data->token.sourceCodePtr->PrintError(data->token, "expected string or int");
+			return;
+		}
+
+		Value<Float>* float_val = new Value<Float>(DataType::Float, false, data->token.row, data->token.col, data->token.index, data->token.sourceCodePtr);
+		float_val->SetValue(f);
+		self->returnValue = float_val;
+	}
+
 	static void F_Add(Function* self)
+	{
+		DataType t;
+		Data* left = self->arguments[0]->Evaluate();
+		Data* right = self->arguments[1]->Evaluate();
+		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float && t != DataType::String))
+		{
+			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
+			return;
+		}
+
+		if (t == DataType::Float)
+		{
+			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
+			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
+
+			Value<Float>* sum = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			sum->SetValue(*f_left->valuePtr + *f_right->valuePtr);
+			self->returnValue = sum;
+		}
+		else if (t == DataType::Int)
+		{
+			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
+			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
+
+			Value<Int>* sum = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			sum->SetValue(*i_left->valuePtr + *i_right->valuePtr);
+			self->returnValue = sum;
+		}
+		else if (t == DataType::String)
+		{
+			Value<String>* s_left = dynamic_cast<Value<String>*>(left);
+			Value<String>* s_right = dynamic_cast<Value<String>*>(right);
+
+			Value<String>* sum = new Value<String>(DataType::String, false, s_left->token.row, s_left->token.col, s_left->token.index, s_left->token.sourceCodePtr);
+			sum->SetValue(*s_left->valuePtr + *s_right->valuePtr);
+			self->returnValue = sum;
+		}
+	}
+
+	static void F_Sub(Function* self)
 	{
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
@@ -1053,18 +1253,80 @@ struct FunctionLibrary
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
 			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
 
-			Value<Float>* sum = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
-			sum->SetValue(*f_left->valuePtr + *f_right->valuePtr);
-			self->returnValue = sum;
+			Value<Float>* dif = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			dif->SetValue(*f_left->valuePtr - *f_right->valuePtr);
+			self->returnValue = dif;
 		}
-		if (t == DataType::Int)
+		else if (t == DataType::Int)
 		{
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
 
-			Value<Int>* sum = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
-			sum->SetValue(*i_left->valuePtr + *i_right->valuePtr);
-			self->returnValue = sum;
+			Value<Int>* dif = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			dif->SetValue(*i_left->valuePtr - *i_right->valuePtr);
+			self->returnValue = dif;
+		}
+	}
+
+	static void F_Mult(Function* self)
+	{
+		DataType t;
+		Data* left = self->arguments[0]->Evaluate();
+		Data* right = self->arguments[1]->Evaluate();
+		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
+		{
+			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
+			return;
+		}
+
+		if (t == DataType::Float)
+		{
+			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
+			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
+
+			Value<Float>* prod = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			prod->SetValue(*f_left->valuePtr * *f_right->valuePtr);
+			self->returnValue = prod;
+		}
+		else if (t == DataType::Int)
+		{
+			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
+			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
+
+			Value<Int>* prod = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			prod->SetValue(*i_left->valuePtr * *i_right->valuePtr);
+			self->returnValue = prod;
+		}
+	}
+
+	static void F_Div(Function* self)
+	{
+		DataType t;
+		Data* left = self->arguments[0]->Evaluate();
+		Data* right = self->arguments[1]->Evaluate();
+		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
+		{
+			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
+			return;
+		}
+
+		if (t == DataType::Float)
+		{
+			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
+			Value<Float>* f_right = dynamic_cast<Value<Float>*>(right);
+
+			Value<Float>* quota = new Value<Float>(DataType::Float, false, f_left->token.row, f_left->token.col, f_left->token.index, f_left->token.sourceCodePtr);
+			quota->SetValue(*f_left->valuePtr / *f_right->valuePtr);
+			self->returnValue = quota;
+		}
+		else if (t == DataType::Int)
+		{
+			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
+			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
+
+			Value<Int>* quota = new Value<Int>(DataType::Int, false, i_left->token.row, i_left->token.col, i_left->token.index, i_left->token.sourceCodePtr);
+			quota->SetValue(*i_left->valuePtr / *i_right->valuePtr);
+			self->returnValue = quota;
 		}
 	}
 
@@ -1088,7 +1350,7 @@ struct FunctionLibrary
 			comp->SetValue(*f_left->valuePtr < *f_right->valuePtr);
 			self->returnValue = comp;
 		}
-		if (t == DataType::Int)
+		else if (t == DataType::Int)
 		{
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
@@ -1104,7 +1366,7 @@ struct FunctionLibrary
 		DataType t;
 		Data* left = self->arguments[0]->Evaluate();
 		Data* right = self->arguments[1]->Evaluate();
-		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float))
+		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float && t != DataType::String))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
 			return;
@@ -1119,7 +1381,7 @@ struct FunctionLibrary
 			comp->SetValue(*f_left->valuePtr == *f_right->valuePtr);
 			self->returnValue = comp;
 		}
-		if (t == DataType::Int)
+		else if (t == DataType::Int)
 		{
 			Value<Int>* i_left = dynamic_cast<Value<Int>*>(left);
 			Value<Int>* i_right = dynamic_cast<Value<Int>*>(right);
@@ -1128,6 +1390,69 @@ struct FunctionLibrary
 			comp->SetValue(*i_left->valuePtr == *i_right->valuePtr);
 			self->returnValue = comp;
 		}
+		else if (t == DataType::String)
+		{
+			Value<String>* s_left = dynamic_cast<Value<String>*>(left);
+			Value<String>* s_right = dynamic_cast<Value<String>*>(right);
+
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, s_left->token.row, s_left->token.col, s_left->token.index, s_left->token.sourceCodePtr);
+			comp->SetValue(*s_left->valuePtr == *s_right->valuePtr);
+			self->returnValue = comp;
+		}
+	}
+
+	static void F_And(Function* self)
+	{
+		DataType t;
+		Data* left = self->arguments[0]->Evaluate();
+		Data* right = self->arguments[1]->Evaluate();
+		if ((t = left->type) != right->type || t != DataType::Bool)
+		{
+			left->token.sourceCodePtr->PrintError(left->token, "expected bool");
+			return;
+		}
+
+		Value<Bool>* b_left = dynamic_cast<Value<Bool>*>(left);
+		Value<Bool>* b_right = dynamic_cast<Value<Bool>*>(right);
+
+		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token.row, b_left->token.col, b_left->token.index, b_left->token.sourceCodePtr);
+		comp->SetValue(*b_left->valuePtr && *b_right->valuePtr);
+		self->returnValue = comp;
+	}
+
+	static void F_Or(Function* self)
+	{
+		DataType t;
+		Data* left = self->arguments[0]->Evaluate();
+		Data* right = self->arguments[1]->Evaluate();
+		if ((t = left->type) != right->type || t != DataType::Bool)
+		{
+			left->token.sourceCodePtr->PrintError(left->token, "expected bool");
+			return;
+		}
+
+		Value<Bool>* b_left = dynamic_cast<Value<Bool>*>(left);
+		Value<Bool>* b_right = dynamic_cast<Value<Bool>*>(right);
+
+		Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token.row, b_left->token.col, b_left->token.index, b_left->token.sourceCodePtr);
+		comp->SetValue(*b_left->valuePtr || *b_right->valuePtr);
+		self->returnValue = comp;
+	}
+
+	static void F_Not(Function* self)
+	{
+		Data* first = self->arguments[0]->Evaluate();
+		if (first->type != DataType::Bool)
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected bool");
+			return;
+		}
+
+		Value<Bool>* b = dynamic_cast<Value<Bool>*>(first);
+
+		Value<Bool>* b_not = new Value<Bool>(DataType::Bool, false, b->token.row, b->token.col, b->token.index, b->token.sourceCodePtr);
+		b_not->SetValue(!*b->valuePtr);
+		self->returnValue = b_not;
 	}
 
 	static void F_Count(Function* self)
@@ -1215,7 +1540,16 @@ struct FunctionLibrary
 		{"if", F_If},
 		{"while", F_While},
 		{"add", F_Add},
+		{"sub", F_Sub},
+		{"mult", F_Mult},
+		{"div", F_Div},
+		{"to_string", F_ToString},
+		{"to_int", F_ToInt},
+		{"to_float", F_ToFloat},
 		{"less", F_Less},
+		{"and", F_And},
+		{"or", F_Or},
+		{"not", F_Not},
 		{"equal", F_Equal},
 		{"count", F_Count},
 		{"keys", F_Keys},
