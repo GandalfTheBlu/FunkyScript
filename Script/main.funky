@@ -1,0 +1,6 @@
+
+do(
+	print("\n---running test.funky---\n\n")
+	call_cpp("run" "C:\Users\Gandalf\Documents\VS CODE\Funky\Script\test.funky")
+	print("\n---completed---\n\n")
+)
