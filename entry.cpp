@@ -1462,7 +1462,7 @@ int main()
 	})
 
 	Script s;
-	if (s.LoadScript("C:\\Users\\Gandalf\\Documents\\VS CODE\\Funky\\Script\\main.funky"))
+	if (s.LoadScript("Script\\main.funky"))
 	{
 		s.Run();
 	}
