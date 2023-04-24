@@ -1,0 +1,19 @@
+
+do
+(
+	def(":obj" function(//#name
+		set_copy(".map" map)
+		def(".greeting" function(
+			print("hello!\n")
+		))
+		push_ref(get(".map")
+			"name" get("#name")
+			"greeting" get_func(".greeting")
+		)
+		return_ref(get(".map"))
+	))
+	
+	set_ref("obj1" get(":obj" "#name" "Grolf"))
+	print(get("obj1") "\n")
+	eval(get_elem(get("obj1") "greeting"))
+)

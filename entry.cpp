@@ -389,8 +389,32 @@ struct Function
 	{
 		parent = nullptr;
 		returnValue = nullptr;
-		arguments = other.arguments;
+		for (auto& arg : other.arguments)
+		{
+			Data* arg_copy = nullptr;
+			arg->CreateSameType(arg_copy);
+			arg_copy->CopyOther(arg);
+			AddArgument(arg_copy);
+		}
+
 		function = other.function;
+	}
+
+	Function& operator=(const Function& other)
+	{
+		parent = nullptr;
+		returnValue = nullptr;
+		for (auto& arg : other.arguments)
+		{
+			Data* arg_copy = nullptr;
+			arg->CreateSameType(arg_copy);
+			arg_copy->CopyOther(arg);
+			AddArgument(arg_copy);
+		}
+
+		function = other.function;
+
+		return *this;
 	}
 
 	~Function()
@@ -674,6 +698,11 @@ struct FunctionLibrary
 		std::cout << "]";
 	}
 
+	static void Helper_PrintFunction(Data* data)
+	{
+		std::cout << "function()";
+	}
+
 	static void Helper_PrintAny(Data* d)
 	{
 		static void(*printFunctions[])(Data*) {
@@ -682,7 +711,8 @@ struct FunctionLibrary
 			Helper_PrintFloat,
 			Helper_PrintString,
 			Helper_PrintList,
-			Helper_PrintMap
+			Helper_PrintMap,
+			Helper_PrintFunction
 		};
 
 		printFunctions[(int)d->type](d);
@@ -1045,6 +1075,8 @@ struct FunctionLibrary
 
 		Value<String>* name = dynamic_cast<Value<String>*>(first);
 		Data* function = self->arguments[1];
+		Value<Function>* function_ref = new Value<Function>(DataType::Function, false, function->token);
+		function_ref->ReferenceOther(function);
 
 		if (!self->parent->AddVariable(*name->valuePtr, function))
 		{
@@ -1102,6 +1134,62 @@ struct FunctionLibrary
 		}
 
 		Data* res = var->Evaluate();
+		if (res == nullptr)
+			return;
+
+		res->CreateSameType(self->returnValue);
+		self->returnValue->ReferenceOther(res);
+	}
+
+	static void F_GetFunction(Function* self)
+	{
+		if (!self->CheckArgumens(1))
+			return;
+
+		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
+		if (first->type != DataType::String)
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected function name (string)");
+			return;
+		}
+
+		Value<String>* name = dynamic_cast<Value<String>*>(first);
+		Data* var = nullptr;
+
+		if (!self->GetVariable(*name->valuePtr, var))
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "function is not defined");
+			return;
+		}
+
+		if (var->type != DataType::Function)
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "the variable is not of type function");
+			return;
+		}
+
+		Value<Function>* func = dynamic_cast<Value<Function>*>(var);
+		self->returnValue = new Value<Function>(DataType::Function, false, func->token);
+		self->returnValue->ReferenceOther(func);
+	}
+
+	static void F_EvaluateFunction(Function* self)
+	{
+		if (!self->CheckArgumens(1))
+			return;
+
+		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
+		if (first->type != DataType::Function)
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected a function");
+			return;
+		}
+
+		Data* res = first->Evaluate();
 		if (res == nullptr)
 			return;
 
@@ -1723,6 +1811,8 @@ struct FunctionLibrary
 		{"rem_elem", F_RemoveElement},
 		{"def", F_DefineFunction},
 		{"get", F_GetVariable},
+		{"get_func", F_GetFunction},
+		{"eval", F_EvaluateFunction},
 		{"if", F_If},
 		{"while", F_While},
 		{"add", F_Add},
@@ -1973,10 +2063,21 @@ struct Script
 	}
 };
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc != 2)
+	{
+		std::cout << "\n[ERROR] incorrect arguments sent to program, expected script path" << std::endl;
+		return 1;
+	}
+
 	SCRIPT_FUNCTION("run", {
+		if (args.size() != 1)
+			return;
+
 		Data* first = args[0]->Evaluate();
+		AFFIRM_DATA(first)
+
 		if (first->AffirmSameType(DataType::String))
 		{
 			std::string& path = *dynamic_cast<Value<String>*>(first)->valuePtr;
@@ -1989,7 +2090,7 @@ int main()
 	})
 
 	Script s;
-	if (s.LoadScript("Script\\main.funky"))
+	if (s.LoadScript(argv[1]))
 	{
 		s.Run();
 	}
