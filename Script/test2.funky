@@ -16,4 +16,8 @@ do
 	set_ref("obj1" get(":obj" "#name" "Grolf"))
 	print(get("obj1") "\n")
 	eval(get_elem(get("obj1") "greeting"))
+	
+	set_ref("obj2" get(":obj" "#name" "Grylf"))
+	print(get("obj2") "\n")
+	eval(get_elem(get("obj2") "greeting"))
 )

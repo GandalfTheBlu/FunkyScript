@@ -1078,7 +1078,7 @@ struct FunctionLibrary
 		Value<Function>* function_ref = new Value<Function>(DataType::Function, false, function->token);
 		function_ref->ReferenceOther(function);
 
-		if (!self->parent->AddVariable(*name->valuePtr, function))
+		if (!self->parent->AddVariable(*name->valuePtr, function_ref))
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "name is already defined");
 			return;
