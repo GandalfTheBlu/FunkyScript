@@ -12,8 +12,20 @@ do
 			"say_name" func_ref(function(//#this
 				print("my name is " get_elem(get("#this") "name") "\n")
 			))
+			"spell_name" func_ref(function(//#this
+				set_copy(".i" 0)
+				set_ref(".name" get_elem(get("#this") "name"))
+				while(less(get(".i") count(get(".name"))) do(
+					print(get_elem(get(".name") get(".i")) "\n")
+					set_copy(".i" add(get(".i") 1))
+				))
+			))
 		)
 		return_ref(get(".map"))
+	))
+	
+	def(":call" function(//#name #method
+		return_ref(eval(get_elem(get(get("#name")) get("#method")) "#this" get(get("#name"))))
 	))
 	
 	set_ref("obj1" get(":obj" "#name" "Grolf"))
@@ -25,4 +37,10 @@ do
 	print(get("obj2") "\n")
 	eval(get_elem(get("obj2") "greeting"))
 	eval(get_elem(get("obj2") "say_name") "#this" get("obj2"))
+	get(":call" "#name" "obj2" "#method" "say_name")
+	get(":call" "#name" "obj2" "#method" "spell_name")
+	
+	set_copy("str" "hello")
+	rem_elem(get("str") 1)
+	print(get("str"))
 )

@@ -943,12 +943,6 @@ struct FunctionLibrary
 		Data* first = self->arguments[0]->Evaluate();
 		AFFIRM_DATA(first)
 
-		if (first->type != DataType::List && first->type != DataType::Map)
-		{
-			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
-			return;
-		}
-
 		Data* second = self->arguments[1]->Evaluate();
 		AFFIRM_DATA(second)
 
@@ -976,7 +970,7 @@ struct FunctionLibrary
 			item->CreateSameType(self->returnValue);
 			self->returnValue->ReferenceOther(item);
 		}
-		else
+		else if(first->type == DataType::Map)
 		{
 			if (!second->AffirmSameType(DataType::String))
 				return;
@@ -996,6 +990,36 @@ struct FunctionLibrary
 			item->CreateSameType(self->returnValue);
 			self->returnValue->ReferenceOther(item);
 		}
+		else if (first->type == DataType::String)
+		{
+			if (!second->AffirmSameType(DataType::Int))
+				return;
+
+			Value<String>* str = dynamic_cast<Value<String>*>(first);
+			Value<Int>* index = dynamic_cast<Value<Int>*>(second);
+
+			int i = 0;
+			if (*index->valuePtr == -1)
+				i = str->valuePtr->size() - 1;
+			else
+				i = *index->valuePtr;
+
+			if (i < 0 || i >= str->valuePtr->size())
+			{
+				second->token.sourceCodePtr->PrintError(second->token, "index out of range");
+				return;
+			}
+
+			Value<String>* val = new Value<String>(DataType::String, false, first->token);
+			std::string s;
+			s += str->valuePtr->at(i);
+			val->SetValue(s);
+			self->returnValue = val;
+		}
+		else
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
+		}
 	}
 
 	static void F_RemoveElement(Function* self)
@@ -1005,12 +1029,6 @@ struct FunctionLibrary
 
 		Data* first = self->arguments[0]->Evaluate();
 		AFFIRM_DATA(first)
-
-		if (first->type != DataType::List && first->type != DataType::Map)
-		{
-			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
-			return;
-		}
 
 		Data* second = self->arguments[1]->Evaluate();
 		AFFIRM_DATA(second)
@@ -1037,7 +1055,7 @@ struct FunctionLibrary
 			delete item;
 			list->valuePtr->erase(list->valuePtr->begin() + i);
 		}
-		else
+		else if(first->type == DataType::Map)
 		{
 			if (!second->AffirmSameType(DataType::String))
 				return;
@@ -1056,6 +1074,38 @@ struct FunctionLibrary
 			Data* item = map->valuePtr->at(k);
 			delete item;
 			map->valuePtr->erase(k);
+		}
+		else if (first->type == DataType::String)
+		{
+			if (first->isConst)
+			{
+				first->token.sourceCodePtr->PrintError(first->token, "cannot change literal string");
+				return;
+			}
+
+			if (!second->AffirmSameType(DataType::Int))
+				return;
+
+			Value<String>* str = dynamic_cast<Value<String>*>(first);
+			Value<Int>* index = dynamic_cast<Value<Int>*>(second);
+
+			int i = 0;
+			if (*index->valuePtr == -1)
+				i = str->valuePtr->size() - 1;
+			else
+				i = *index->valuePtr;
+
+			if (i < 0 || i >= str->valuePtr->size())
+			{
+				second->token.sourceCodePtr->PrintError(second->token, "index out of range");
+				return;
+			}
+
+			str->valuePtr->erase(i, 1);
+		}
+		else
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
 		}
 	}
 
@@ -1759,16 +1809,24 @@ struct FunctionLibrary
 		Data* first = self->arguments[0]->Evaluate();
 		AFFIRM_DATA(first)
 
-		if (first->type != DataType::List)
+		if (first->type == DataType::List)
 		{
-			first->token.sourceCodePtr->PrintError(first->token, "expected list");
-			return;
+			Value<List>* list = dynamic_cast<Value<List>*>(first);
+			Value<Int>* count = new Value<Int>(DataType::Int, false, first->token);
+			count->SetValue((int)list->valuePtr->size());
+			self->returnValue = count;
 		}
-
-		Value<List>* list = dynamic_cast<Value<List>*>(first);
-		Value<Int>* count = new Value<Int>(DataType::Int, false, first->token);
-		count->SetValue((int)list->valuePtr->size());
-		self->returnValue = count;
+		else if (first->type == DataType::String)
+		{
+			Value<String>* str = dynamic_cast<Value<String>*>(first);
+			Value<Int>* count = new Value<Int>(DataType::Int, false, first->token);
+			count->SetValue((int)str->valuePtr->size());
+			self->returnValue = count;
+		}
+		else
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "expected list or string");
+		}
 	}
 
 	static void F_Keys(Function* self)
