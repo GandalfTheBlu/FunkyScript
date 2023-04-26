@@ -9,6 +9,9 @@ do
 		push_ref(get(".map")
 			"name" get("#name")
 			"greeting" get_func(".greeting")
+			"say_name" func_ref(function(//#this
+				print("my name is " get_elem(get("#this") "name") "\n")
+			))
 		)
 		return_ref(get(".map"))
 	))
@@ -16,8 +19,10 @@ do
 	set_ref("obj1" get(":obj" "#name" "Grolf"))
 	print(get("obj1") "\n")
 	eval(get_elem(get("obj1") "greeting"))
+	eval(get_elem(get("obj1") "say_name") "#this" get("obj1"))
 	
 	set_ref("obj2" get(":obj" "#name" "Grylf"))
 	print(get("obj2") "\n")
 	eval(get_elem(get("obj2") "greeting"))
+	eval(get_elem(get("obj2") "say_name") "#this" get("obj2"))
 )

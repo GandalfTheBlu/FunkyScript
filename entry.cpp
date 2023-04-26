@@ -1175,6 +1175,23 @@ struct FunctionLibrary
 		self->returnValue->ReferenceOther(func);
 	}
 
+	static void F_FunctionReference(Function* self)
+	{
+		if (!self->CheckArgumens(1))
+			return;
+
+		Data* first = self->arguments[0];
+		if (first->type != DataType::Function)
+		{
+			first->token.sourceCodePtr->PrintError(first->token, "the argument is not of type function");
+			return;
+		}
+
+		Value<Function>* func = dynamic_cast<Value<Function>*>(first);
+		self->returnValue = new Value<Function>(DataType::Function, false, func->token);
+		self->returnValue->ReferenceOther(func);
+	}
+
 	static void F_EvaluateFunction(Function* self)
 	{
 		if (!self->CheckArgumens(1))
@@ -1187,6 +1204,28 @@ struct FunctionLibrary
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected a function");
 			return;
+		}
+
+		Value<Function>* func = dynamic_cast<Value<Function>*>(first);
+		for (int i = 1; i + 1 < self->arguments.size(); i += 2)
+		{
+			Data* name = self->arguments[i]->Evaluate();
+			AFFIRM_DATA(name)
+
+			if (name->type != DataType::String)
+			{
+				name->token.sourceCodePtr->PrintError(name->token, "expected argument name (string)");
+				return;
+			}
+
+			Value<String>* name_str = dynamic_cast<Value<String>*>(name);
+			Data* arg = self->arguments[i + 1]->Evaluate();
+			AFFIRM_DATA(arg)
+
+			Data* argRef = nullptr;
+			arg->CreateSameType(argRef);
+			argRef->ReferenceOther(arg);
+			func->valuePtr->AddVariable(*name_str->valuePtr, argRef);
 		}
 
 		Data* res = first->Evaluate();
@@ -1812,6 +1851,7 @@ struct FunctionLibrary
 		{"def", F_DefineFunction},
 		{"get", F_GetVariable},
 		{"get_func", F_GetFunction},
+		{"func_ref", F_FunctionReference},
 		{"eval", F_EvaluateFunction},
 		{"if", F_If},
 		{"while", F_While},
