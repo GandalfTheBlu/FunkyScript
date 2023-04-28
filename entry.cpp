@@ -96,7 +96,7 @@ struct Data
 			"function"
 		};
 
-		LogError("type mismatch between " + names[(int)other->type] + " and " + names[(int)type]);
+		token.sourceCodePtr->PrintError(token, "type mismatch between " + names[(int)other->type] + " and " + names[(int)type]);
 		return false;
 	}
 
@@ -116,7 +116,7 @@ struct Data
 			"function"
 		};
 
-		LogError("type mismatch between " + names[(int)_type] + " and " + names[(int)type]);
+		token.sourceCodePtr->PrintError(token, "type mismatch between " + names[(int)_type] + " and " + names[(int)type]);
 		return false;
 	}
 };
@@ -399,6 +399,7 @@ struct Function
 		}
 
 		function = other.function;
+		parameterNames = other.parameterNames;
 	}
 
 	Function& operator=(const Function& other)
@@ -414,6 +415,7 @@ struct Function
 		}
 
 		function = other.function;
+		parameterNames = other.parameterNames;
 
 		return *this;
 	}
@@ -1145,6 +1147,8 @@ struct FunctionLibrary
 		for (int i = 1; i < self->arguments.size()-1; i++)
 		{
 			Data* param = self->arguments[i]->Evaluate();
+			AFFIRM_DATA(param)
+
 			if (!param->AffirmSameType(DataType::String))
 			{
 				param->token.sourceCodePtr->PrintError(param->token, "expected parameter name");
@@ -1203,7 +1207,7 @@ struct FunctionLibrary
 		self->returnValue->ReferenceOther(res);
 	}
 
-	static void F_GetFunction(Function* self)
+	static void F_GetFunctionReference(Function* self)
 	{
 		if (!self->CheckArgumens(1))
 			return;
@@ -1242,16 +1246,32 @@ struct FunctionLibrary
 		if (!self->CheckArgumens(1))
 			return;
 
-		Data* first = self->arguments[0];
-		if (first->type != DataType::Function)
+		Data* last = self->arguments.back();
+		if (last->type != DataType::Function)
 		{
-			first->token.sourceCodePtr->PrintError(first->token, "the argument is not of type function");
+			last->token.sourceCodePtr->PrintError(last->token, "the argument is not of type function");
 			return;
 		}
 
-		Value<Function>* func = dynamic_cast<Value<Function>*>(first);
-		self->returnValue = new Value<Function>(DataType::Function, false, func->token);
-		self->returnValue->ReferenceOther(func);
+		Value<Function>* func = dynamic_cast<Value<Function>*>(last);
+		Value<Function>* func_ref = new Value<Function>(DataType::Function, false, func->token);
+		func_ref->ReferenceOther(func);
+		self->returnValue = func_ref;
+
+		for (int i = 0; i < self->arguments.size()-1; i++)
+		{
+			Data* param = self->arguments[i]->Evaluate();
+			AFFIRM_DATA(param)
+
+			if (!param->AffirmSameType(DataType::String))
+			{
+				param->token.sourceCodePtr->PrintError(param->token, "expected parameter name");
+				return;
+			}
+
+			Value<String>* param_str = dynamic_cast<Value<String>*>(param);
+			func_ref->valuePtr->parameterNames.push_back(*param_str->valuePtr);
+		}
 	}
 
 	static void F_EvaluateFunction(Function* self)
@@ -1269,25 +1289,15 @@ struct FunctionLibrary
 		}
 
 		Value<Function>* func = dynamic_cast<Value<Function>*>(first);
-		for (int i = 1; i + 1 < self->arguments.size(); i += 2)
+		for (int i = 0; i + 1 < self->arguments.size() && i < func->valuePtr->parameterNames.size(); i++)
 		{
-			Data* name = self->arguments[i]->Evaluate();
-			AFFIRM_DATA(name)
-
-			if (name->type != DataType::String)
-			{
-				name->token.sourceCodePtr->PrintError(name->token, "expected argument name (string)");
-				return;
-			}
-
-			Value<String>* name_str = dynamic_cast<Value<String>*>(name);
 			Data* arg = self->arguments[i + 1]->Evaluate();
 			AFFIRM_DATA(arg)
 
 			Data* argRef = nullptr;
 			arg->CreateSameType(argRef);
 			argRef->ReferenceOther(arg);
-			func->valuePtr->AddVariable(*name_str->valuePtr, argRef);
+			func->valuePtr->AddVariable(func->valuePtr->parameterNames[i], argRef);
 		}
 
 		Data* res = first->Evaluate();
@@ -1920,8 +1930,8 @@ struct FunctionLibrary
 		{"rem_elem", F_RemoveElement},
 		{"def", F_DefineFunction},
 		{"get", F_GetVariable},
-		{"get_func", F_GetFunction},
-		{"func_ref", F_FunctionReference},
+		{"ref_func", F_GetFunctionReference},
+		{"lambda", F_FunctionReference},
 		{"eval", F_EvaluateFunction},
 		{"if", F_If},
 		{"while", F_While},
