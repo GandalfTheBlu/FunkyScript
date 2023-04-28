@@ -370,6 +370,7 @@ struct Function
 	std::vector<Data*> arguments;
 	void (*function)(Function*);
 	std::unordered_map<std::string, Data*> variables;
+	std::vector<std::string> parameterNames;
 
 	Function()
 	{
@@ -1124,7 +1125,14 @@ struct FunctionLibrary
 		}
 
 		Value<String>* name = dynamic_cast<Value<String>*>(first);
-		Data* function = self->arguments[1];
+		Data* function = self->arguments.back();
+		
+		if (!function->AffirmSameType(DataType::Function))
+		{
+			function->token.sourceCodePtr->PrintError(first->token, "expected function");
+			return;
+		}
+
 		Value<Function>* function_ref = new Value<Function>(DataType::Function, false, function->token);
 		function_ref->ReferenceOther(function);
 
@@ -1132,6 +1140,20 @@ struct FunctionLibrary
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "name is already defined");
 			return;
+		}
+		
+		for (int i = 1; i < self->arguments.size()-1; i++)
+		{
+			Data* param = self->arguments[i]->Evaluate();
+			if (!param->AffirmSameType(DataType::String))
+			{
+				param->token.sourceCodePtr->PrintError(param->token, "expected parameter name");
+				return;
+			}
+
+			Value<String>* param_str = dynamic_cast<Value<String>*>(param);
+
+			function_ref->valuePtr->parameterNames.push_back(*param_str->valuePtr);
 		}
 	}
 
@@ -1161,25 +1183,15 @@ struct FunctionLibrary
 		if (var->type == DataType::Function)
 		{
 			Value<Function>* func = dynamic_cast<Value<Function>*>(var);
-			for (int i = 1; i+1 < self->arguments.size(); i+=2)
+			for (int i = 0; i+1 < self->arguments.size() && i < func->valuePtr->parameterNames.size(); i++)
 			{
-				Data* name = self->arguments[i]->Evaluate();
-				AFFIRM_DATA(name)
-
-				if (name->type != DataType::String)
-				{
-					name->token.sourceCodePtr->PrintError(name->token, "expected argument name (string)");
-					return;
-				}
-
-				Value<String>* name_str = dynamic_cast<Value<String>*>(name);
 				Data* arg = self->arguments[i+1]->Evaluate();
 				AFFIRM_DATA(arg)
 
 				Data* argRef = nullptr;
 				arg->CreateSameType(argRef);
 				argRef->ReferenceOther(arg);
-				func->valuePtr->AddVariable(*name_str->valuePtr, argRef);
+				func->valuePtr->AddVariable(func->valuePtr->parameterNames[i], argRef);
 			}
 		}
 

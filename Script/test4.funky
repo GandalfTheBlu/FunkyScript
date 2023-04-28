@@ -1,0 +1,16 @@
+
+do
+(
+	def(":ipow" "#a" "#b" function(
+		set_copy(".i" 0)
+		set_copy(".res" 1)
+		while(less(get(".i") get("#b")) do(
+			set_copy(".res" mult(get(".res") get("#a")))
+			set_copy(".i" add(get(".i") 1))
+			print(get(".res") "\n")
+		))
+		return_copy(get(".res"))
+	))
+	
+	print(get(":ipow" 2 8))
+)
