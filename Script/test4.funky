@@ -19,13 +19,13 @@ do
 			print(get("#thing"))
 		))
 		push_copy(get(".obj") 
-			".name" get("#name")
-			".age" get("#age")
-			":say_hello" lambda(print("hello there!\n"))
-			":echo" lambda("#msg" function(
+			"name" get("#name")
+			"age" get("#age")
+			"say_hello" lambda(print("hello there!\n"))
+			"echo" lambda("#msg" function(
 				print(get("#msg"))
 			))
-			":print" ref_func(":print")
+			"print" ref_func(":print")
 		)
 		return_ref(get(".obj"))
 	))
@@ -33,7 +33,13 @@ do
 	set_ref("obj" get(":obj" "Greg" 21))
 	print(get("obj") "\n")
 	
-	eval(get_elem(get("obj") ":say_hello"))
-	eval(get_elem(get("obj") ":echo") "this is an echo!\n")
-	eval(get_elem(get("obj") ":print") "print this stuff too!\n")
+	// $1.$2()
+	#macro ([a-z_]+)\.([a-z_]+)\(\) eval(get_elem(get("$1")"$2"))
+	
+	// $1.$2($3)
+	#macro ([a-z_]+)\.([a-z_]+)\((.+)\) eval(get_elem(get("$1")"$2")$3)
+	
+	obj.say_hello()
+	obj.echo("this is echo!\n")
+	obj.print("this is printed!\n")
 )

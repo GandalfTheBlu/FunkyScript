@@ -6,6 +6,7 @@
 #include <utility>
 #include <fstream>
 #include <sstream>
+#include <regex>
 
 void LogError(const std::string& message)
 {
@@ -43,6 +44,8 @@ struct SourceCode
 	SourceCode();
 
 	bool ReadFile(const std::string _path);
+
+	void Reset();
 
 	char CurrentChar();
 
@@ -523,6 +526,13 @@ bool SourceCode::ReadFile(const std::string _path)
 
 	LogError("failed to read source code at '" + path + "'");
 	return false;
+}
+
+void SourceCode::Reset()
+{
+	row = 1;
+	col = 1;
+	index = 0;
 }
 
 char SourceCode::CurrentChar()
@@ -1979,6 +1989,58 @@ struct Script
 		return IsWhitespace(c) || c == '(' || c == ')';
 	}
 
+	bool ApplyMacros()
+	{
+		while (true)
+		{
+			if (sourceCode.BeginsWith("#macro"))
+			{
+				size_t macroStartIndex = sourceCode.index;
+				sourceCode.MoveAlong(6);
+
+				std::string regexStr;
+				bool goNext = true;
+				char c;
+				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
+					regexStr += c;
+
+				if (!goNext)
+				{
+					sourceCode.PrintErrorAtCurrentIndex("incomplete macro");
+					return false;
+				}
+
+				std::string expansionStr;
+				goNext = true;
+				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
+					expansionStr += c;
+
+				if (!goNext)
+				{
+					sourceCode.PrintErrorAtCurrentIndex("incomplete macro");
+					return false;
+				}
+
+				std::regex rgx(regexStr);
+
+				std::string restOfText = sourceCode.Substring(sourceCode.index, sourceCode.text.size()-1);
+
+				std::string result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
+				sourceCode.text.resize(macroStartIndex);
+				sourceCode.text.append(result.begin(), result.end());
+				sourceCode.index = macroStartIndex;
+			}
+
+
+			if (!sourceCode.NextChar())
+				break;
+		}
+
+
+		sourceCode.Reset();
+		return true;
+	}
+
 	bool RecursiveParse(Data*& outData, int maxIndex = -1)
 	{
 		Token unknownToken;
@@ -2167,6 +2229,9 @@ struct Script
 	bool LoadScript(const std::string& path)
 	{
 		if (!sourceCode.ReadFile(path))
+			return false;
+
+		if (!ApplyMacros())
 			return false;
 
 		Data* res = nullptr;
