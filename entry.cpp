@@ -1989,11 +1989,23 @@ struct Script
 		return IsWhitespace(c) || c == '(' || c == ')';
 	}
 
-	bool ApplyMacros()
+	bool ApplyPreprocessing()
 	{
 		while (true)
 		{
-			if (sourceCode.BeginsWith("#macro"))
+			if (sourceCode.BeginsWith("/*"))
+			{
+				for (; sourceCode.NextChar() && !sourceCode.BeginsWith("*/"););
+
+				sourceCode.MoveAlong(2);
+			}
+			else if (sourceCode.BeginsWith("//"))
+			{
+				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
+
+				sourceCode.NextChar();
+			}
+			else if (sourceCode.BeginsWith("#macro"))
 			{
 				size_t macroStartIndex = sourceCode.index;
 				sourceCode.MoveAlong(6);
@@ -2010,9 +2022,14 @@ struct Script
 					return false;
 				}
 
+				std::regex rgxName("(\\$name)");
+				std::regex rgxAny("(\\$any)");
+				regexStr = std::regex_replace(regexStr, rgxName, "[a-z_]+", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxAny, ".+", std::regex_constants::format_default);
+
 				std::string expansionStr;
 				goNext = true;
-				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
+				for (; (goNext = sourceCode.NextChar()) && (c = sourceCode.CurrentChar()) != '\n';)
 					expansionStr += c;
 
 				if (!goNext)
@@ -2022,13 +2039,57 @@ struct Script
 				}
 
 				std::regex rgx(regexStr);
-
 				std::string restOfText = sourceCode.Substring(sourceCode.index, sourceCode.text.size()-1);
+				std::string result;
 
-				std::string result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
+				try
+				{
+					result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
+				}
+				catch (const std::regex_error& e) {
+					sourceCode.PrintErrorAtCurrentIndex(e.what());
+					return false;
+				}
+
 				sourceCode.text.resize(macroStartIndex);
 				sourceCode.text.append(result.begin(), result.end());
 				sourceCode.index = macroStartIndex;
+			}
+			else if (sourceCode.BeginsWith("#include"))
+			{
+				size_t includeStartIndex = sourceCode.index;
+				sourceCode.MoveAlong(8);
+
+				std::string includeString;
+				char c;
+				int quotationMarks = 0;
+				for (; sourceCode.NextChar();)
+				{
+					if ((c = sourceCode.CurrentChar()) == '"')
+					{
+						if(++quotationMarks == 2)
+							break;
+					}
+					else if(quotationMarks == 1)
+						includeString += c;
+				}
+
+				if (quotationMarks != 2)
+				{
+					sourceCode.PrintErrorAtCurrentIndex("missing '\"' after #include");
+					return false;
+				}
+
+				SourceCode includeCode;
+				if (!includeCode.ReadFile(includeString))
+				{
+					sourceCode.PrintErrorAtCurrentIndex("failed to include file");
+					return false;
+				}
+
+				sourceCode.text.erase(includeStartIndex, sourceCode.index-includeStartIndex+1);
+				sourceCode.text.insert(sourceCode.text.begin()+includeStartIndex, includeCode.text.begin(), includeCode.text.end());
+				sourceCode.index = includeStartIndex;
 			}
 
 
@@ -2231,7 +2292,7 @@ struct Script
 		if (!sourceCode.ReadFile(path))
 			return false;
 
-		if (!ApplyMacros())
+		if (!ApplyPreprocessing())
 			return false;
 
 		Data* res = nullptr;

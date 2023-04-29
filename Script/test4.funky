@@ -33,13 +33,17 @@ do
 	set_ref("obj" get(":obj" "Greg" 21))
 	print(get("obj") "\n")
 	
-	// $1.$2()
-	#macro ([a-z_]+)\.([a-z_]+)\(\) eval(get_elem(get("$1")"$2"))
+	#include "C:\Users\Gandalf\Documents\VS CODE\Funky_git\FunkyScript\Script\test_include.funky"
+	#include "C:\Users\Gandalf\Documents\VS CODE\Funky_git\FunkyScript\Script\std_macros.funky"
 	
-	// $1.$2($3)
-	#macro ([a-z_]+)\.([a-z_]+)\((.+)\) eval(get_elem(get("$1")"$2")$3)
+	print(obj.name; "\n")
+	obj.say_hello();
+	obj.echo("this is echo!\n");
+	obj.print("this is printed!\n");
 	
-	obj.say_hello()
-	obj.echo("this is echo!\n")
-	obj.print("this is printed!\n")
+	my_var c= 12.0;
+	print(get("my_var") "\n")
+	
+	my_obj_ref r= get("obj");
+	print(get("my_obj_ref") "\n")
 )

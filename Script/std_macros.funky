@@ -1,0 +1,7 @@
+
+#macro ($name)\.($name)\(($any)\)\; eval(get_elem(get("$1") "$2") $3)
+#macro ($name)\.($name)\(\)\; eval(get_elem(get("$1") "$2"))
+#macro ($name)\.($name)\; get_elem(get("$1") "$2")
+
+#macro ($name)\sc\=\s($any)\; set_copy("$1" $2)
+#macro ($name)\sr\=\s($any)\; set_ref("$1" $2)
