@@ -1,0 +1,47 @@
+
+#include "C:\Users\Gandalf\Documents\VS CODE\Funky_git\FunkyScript\Script\std_macros.funky"
+
+do
+(
+	struct my_obj12s{
+		"name" "Gref"
+		"age" 21
+		"height" 1.92
+		"married" false
+		"func" lambda("#s" print("Gref says: " get("#s")))
+		"func2" lambda(print("in\n"))
+	};
+	
+	vlog: my_obj12s;
+	print(my_obj12s.name; "\n")
+	
+	my_obj12s.func("hello there\n");
+	my_obj12s.func2();
+	
+	i = 0;
+	i++;
+	i += 2;
+	vlog: i;
+	
+	s = "hello";
+	s += " world";
+	vlog: s;
+	
+	j = 0;
+	while(j < i; do(
+		vlog: j;
+		j++;
+	))
+	
+	j = 0;
+	while(j < 10; do(
+		vlog: j;
+		j++;
+	))
+	
+	if(j > 8; print("j is bigger than 8\n"))
+	
+	if(j == 10; print("j is equal to 10\n"))
+	if(j == j; print("j is equal to j\n"))
+	if(j != 12; print("j is not equal to 12\n"))
+)

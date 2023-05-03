@@ -1,7 +1,47 @@
 
+// function call on object
 #macro ($name)\.($name)\(($any)\)\; eval(get_elem(get("$1") "$2") $3)
-#macro ($name)\.($name)\(\)\; eval(get_elem(get("$1") "$2"))
+
+// get element from object
 #macro ($name)\.($name)\; get_elem(get("$1") "$2")
 
-#macro ($name)\sc\=\s($any)\; set_copy("$1" $2)
-#macro ($name)\sr\=\s($any)\; set_ref("$1" $2)
+// define struct
+#macro struct\s($name)\{($some)\}\; set_copy("$1" map) push_copy(get("$1") $2)
+
+// copy assign operator
+#macro ($name)\s\=\s($name)\; set_copy("$1" get("$2"))
+#macro ($name)\s\=\s($some)\; set_copy("$1" $2)
+
+// reference assign operator
+#macro ($name)\sr\=\s($some)\; set_ref("$1" $2)
+
+// increment operator
+#macro ($name)\+\+\; set_copy("$1" add(get("$1") 1))
+
+// decrement operator
+#macro ($name)\-\-\; set_copy("$1" sub(get("$1") 1))
+
+// add-assign operator
+#macro ($name)\s\+\=($some)\; set_copy("$1" add(get("$1") $2))
+
+// subtract-assign operator
+#macro ($name)\s\-\=($some)\; set_copy("$1" sub(get("$1") $2))
+
+// less comparison
+#macro ($name)\s\<\s($name)\; less(get("$1") get("$2"))
+#macro ($name)\s\<\s($some)\; less(get("$1") $2)
+
+// greater comparison
+#macro ($name)\s\>\s($name)\; less(get("$2") get("$1"))
+#macro ($name)\s\>\s($some)\; less($2 get("$1"))
+
+// equel comparison
+#macro ($name)\s\=\=\s($name)\; equal(get("$1") get("$2"))
+#macro ($name)\s\=\=\s($some)\; equal(get("$1") $2)
+
+// not equel comparison
+#macro ($name)\s\!\=\s($name)\; not(equal(get("$1") get("$2")))
+#macro ($name)\s\!\=\s($some)\; not(equal(get("$1") $2))
+
+// log variable to console
+#macro vlog\:\s($name)\; print(get("$1") "\n")

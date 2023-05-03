@@ -1997,20 +1997,18 @@ struct Script
 			{
 				for (; sourceCode.NextChar() && !sourceCode.BeginsWith("*/"););
 
-				sourceCode.MoveAlong(2);
+				sourceCode.NextChar();
 			}
 			else if (sourceCode.BeginsWith("//"))
 			{
 				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
-
-				sourceCode.NextChar();
 			}
 			else if (sourceCode.BeginsWith("#macro"))
 			{
 				size_t macroStartIndex = sourceCode.index;
 				sourceCode.MoveAlong(6);
 
-				std::string regexStr;
+				std::string regexStr = "(^(?!\\s*#macro).*?)";// ignore lines that start with #macro
 				bool goNext = true;
 				char c;
 				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
@@ -2022,28 +2020,33 @@ struct Script
 					return false;
 				}
 
+				std::string s = regexStr;
+
 				std::regex rgxName("(\\$name)");
 				std::regex rgxAny("(\\$any)");
-				regexStr = std::regex_replace(regexStr, rgxName, "[a-z_]+", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxAny, ".+", std::regex_constants::format_default);
+				std::regex rgxSome("(\\$some)");
+				regexStr = std::regex_replace(regexStr, rgxName, "[a-zA-Z_][a-zA-Z0-9_]*", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxAny, "[^;]*", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxSome, "[^;]+", std::regex_constants::format_default);
 
-				std::string expansionStr;
-				goNext = true;
-				for (; (goNext = sourceCode.NextChar()) && (c = sourceCode.CurrentChar()) != '\n';)
-					expansionStr += c;
-
-				if (!goNext)
+				std::string expansionStr = "$1";// always re-insert the first part that is leading up to the expression
+				bool lastWasDollarSign = false;
+				for (; sourceCode.NextChar() && (c = sourceCode.CurrentChar()) != '\n';)
 				{
-					sourceCode.PrintErrorAtCurrentIndex("incomplete macro");
-					return false;
+					expansionStr += (c + lastWasDollarSign);
+
+					if (c == '$')
+						lastWasDollarSign = true;
+					else
+						lastWasDollarSign = false;
 				}
 
-				std::regex rgx(regexStr);
 				std::string restOfText = sourceCode.Substring(sourceCode.index, sourceCode.text.size()-1);
 				std::string result;
 
 				try
 				{
+					std::regex rgx(regexStr);
 					result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
 				}
 				catch (const std::regex_error& e) {
@@ -2092,11 +2095,9 @@ struct Script
 				sourceCode.index = includeStartIndex;
 			}
 
-
 			if (!sourceCode.NextChar())
 				break;
 		}
-
 
 		sourceCode.Reset();
 		return true;
@@ -2135,7 +2136,7 @@ struct Script
 				outData = val;
 				return true;
 			}
-			else if (c == '-' || IsDigit(c))
+			else if (c == '-' || (IsDigit(c) && unknown.size() == 0))
 			{
 				bool isFloat = false;
 				std::string num;
