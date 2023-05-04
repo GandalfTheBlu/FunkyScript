@@ -1,0 +1,195 @@
+
+-- DO --
+syntax:
+	do(
+		function1
+		function2
+		...
+	)
+	
+description:
+	* executes argument functions in order
+	* if a value is returned within the scope, it is passed on to parent
+
+
+-- FUNCTION --
+syntax:
+	function(
+		function1
+		function2
+		...
+	)
+	
+description:
+	* executes argument functions in order
+	* if a value is returned within the scope, the value is returned to
+	  the caller of the function
+	
+	
+-- RETURN_COPY --
+syntax:
+	return_copy(value)
+	
+description:
+	* returns a copy of the argument to the caller of the function
+	  that encapsulates it
+	
+	
+-- RETURN_REF --
+syntax:
+	return_ref(value)
+	
+description:
+	* returns a reference of the argument to the caller of the function
+	  that encapsulates it
+	* if the argument is a literal value, it becomes a constant reference
+	
+	
+-- SET_COPY --
+syntax:
+	set_copy(name value)
+	
+description:
+	* defines a variable in the current scope
+	* name is a string value
+	* the variable's value will be a copy of the argument
+	* the type of the variable is dynamically assigned
+	  based on the given value each time the variable is first initialized
+	  within the parent scope
+	  
+	  
+-- SET_REF --
+syntax:
+	set_ref(name value)
+	
+description:
+	* defines a variable in the current scope
+	* name is a string value
+	* the variable will reference the argument
+	* if the argument is a literal value, the variable will be a constant
+	  reference
+	* the type of the variable is dynamically assigned
+	  based on the given value each time the variable is first initialized
+	  within the parent scope
+
+
+-- GET --
+syntax:
+	get(variable_name argument1 argument2 ...)
+	
+description:
+	* gets a variable by name (string value)
+	* if the variable is of type function, optional arguments can be 
+	  passed and the function will be evaluated
+	  
+	  
+-- PUSH_COPY --
+syntax:
+	push_copy(list_variable item1 item2 ...)
+	push_copy(map_variable key1 item1 key2 item2 ...)
+	
+description:
+	* adds copies of the items to a container
+	* if the container is of type list, items are added to the back
+	  of the list in the order they are written
+	* if the container is of type map, pairs of keys (string value) and
+	  items are inserted
+	  
+	  
+-- PUSH_REF --
+syntax:
+	push_ref(list_variable item1 item2 ...)
+	push_ref(map_variable key1 item1 key2 item2 ...)
+	
+description:
+	* adds references to the items to a container
+	* if items are literal values, the references will be constant references
+	* if the container is of type list, items are added to the back
+	  of the list in the order they are written
+	* if the container is of type map, pairs of keys (string value) and
+	  items are inserted
+	  
+
+-- GET_ELEM --
+syntax:
+	get_elem(list_variable index)
+	get_elem(map_variable key)
+	
+description:
+	* gets an item from a container
+	* if the container is of type list, the element is fetched by index (int)
+	* if the container is of type map, the element is fetched by key (string)
+	
+
+-- REM_ELEM --
+syntax:
+	rem_elem(list_variable index)
+	get_elem(map_variable key)
+	
+description:
+	* removes an item from a container
+	* if the container is of type list, the element is located by index (int)
+	* if the container is of type map, the element is located by key (string)
+	
+
+-- DEF --
+syntax:
+	def(function_name parameter_name1 parameter_name2 ... function_body)
+	
+description:
+	* defines a function in the parent scope
+	* function_name is a string value
+	* optional parameter names can be given as string values
+	* the function body can be any function but only 'function' can 
+	  return a value
+	  
+
+--  LAMBDA --
+syntax:
+	lambda(parameter_name1 parameter_name2 ... function_body)
+	
+description:
+	* returns an inline-function
+	* optional parameter names can be given as string values
+	* the function body can be any function but only 'function' can 
+	  return a value
+	  
+	  
+-- REF_FUNC --
+syntax:
+	ref_func(function_name)
+	
+description:
+	* returns a variable of type function
+	* function_name is a string value
+	
+	
+-- EVAL --
+syntax:
+	eval(function_variable argument1 argument2 ...)
+	
+description:
+	* evaluates a function variable
+	* function_variable is of type function
+	* optional arguments can be passed to the function
+	
+	
+-- IF --
+syntax:
+	if(bool_value body_function else_function)
+	
+description:
+	* evaluates a boolen expression and executes the body function
+	  if evaluated to true, else the else-function is executed if it exists
+	* if a value is returned within the scope, it is passed on to parent
+	  
+
+-- WHILE --
+syntax:
+	while(bool_value body_function)
+	
+description:
+	* executes the body function until the boolean expression evaluates to false
+	* if a value is returned within the scope, it is passed on to parent
+	
+

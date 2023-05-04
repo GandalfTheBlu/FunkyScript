@@ -1,6 +1,6 @@
 
 do(
-	print("\n---running---\n\n")
-	call_cpp("run" "baboom.funky")
-	print("\n---completed---\n\n")
+	print("\n\n---running---\n\n")
+	call_cpp("run" "class.funky")
+	print("\n\n---completed---\n\n")
 )
