@@ -618,7 +618,7 @@ bool SourceCode::BeginsWith(const std::string& str)
 
 std::unordered_map<std::string, void(*)(List&)> scriptFunctions;
 
-#define SCRIPT_FUNCTION(name, body) scriptFunctions[name] = [](List& args)body;
+#define SCRIPT_FUNCTION(name, body) scriptFunctions[name] = [](List& args)body
 #define AFFIRM_DATA(data) if(data == nullptr){return;}
 
 struct FunctionLibrary
@@ -1965,6 +1965,7 @@ struct FunctionLibrary
 
 struct Script
 {
+	static std::string workingDirectory;
 	SourceCode sourceCode;
 	FunctionLibrary functionLibrary;
 	Value<Function>* rootFunction;
@@ -2026,8 +2027,8 @@ struct Script
 				std::regex rgxAny("(\\$any)");
 				std::regex rgxSome("(\\$some)");
 				regexStr = std::regex_replace(regexStr, rgxName, "[a-zA-Z_][a-zA-Z0-9_]*", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxAny, "[^;]*", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxSome, "[^;]+", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxAny, "((?:\\\".*?\\\"|[a-zA-Z0-9\\._\\(\\)\\s])*)", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxSome, "((?:\\\".*?\\\"|[a-zA-Z0-9\\._\\(\\)\\s])+)", std::regex_constants::format_default);
 
 				std::string expansionStr = "$1";// always re-insert the first part that is leading up to the expression
 				bool lastWasDollarSign = false;
@@ -2063,17 +2064,17 @@ struct Script
 				size_t includeStartIndex = sourceCode.index;
 				sourceCode.MoveAlong(8);
 
-				std::string includeString;
+				std::string includeString = workingDirectory;
 				char c;
 				int quotationMarks = 0;
 				for (; sourceCode.NextChar();)
 				{
 					if ((c = sourceCode.CurrentChar()) == '"')
 					{
-						if(++quotationMarks == 2)
+						if (++quotationMarks == 2)
 							break;
 					}
-					else if(quotationMarks == 1)
+					else if (quotationMarks == 1)
 						includeString += c;
 				}
 
@@ -2090,8 +2091,8 @@ struct Script
 					return false;
 				}
 
-				sourceCode.text.erase(includeStartIndex, sourceCode.index-includeStartIndex+1);
-				sourceCode.text.insert(sourceCode.text.begin()+includeStartIndex, includeCode.text.begin(), includeCode.text.end());
+				sourceCode.text.erase(includeStartIndex, sourceCode.index - includeStartIndex + 1);
+				sourceCode.text.insert(sourceCode.text.begin() + includeStartIndex, includeCode.text.begin(), includeCode.text.end());
 				sourceCode.index = includeStartIndex;
 			}
 
@@ -2116,12 +2117,11 @@ struct Script
 			else if (sourceCode.BeginsWith("/*"))
 			{
 				for (; sourceCode.NextChar() && !sourceCode.BeginsWith("*/"););
-				sourceCode.MoveAlong(2);
+				sourceCode.NextChar();
 			}
 			else if (sourceCode.BeginsWith("//"))
 			{
 				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
-				sourceCode.NextChar();
 			}
 			else if (c == '"')
 			{
@@ -2290,7 +2290,7 @@ struct Script
 
 	bool LoadScript(const std::string& path)
 	{
-		if (!sourceCode.ReadFile(path))
+		if (!sourceCode.ReadFile(workingDirectory + path))
 			return false;
 
 		if (!ApplyPreprocessing())
@@ -2310,11 +2310,13 @@ struct Script
 	}
 };
 
+std::string Script::workingDirectory;
+
 int main(int argc, char** argv)
 {
 	if (argc != 2)
 	{
-		std::cout << "\n[ERROR] incorrect arguments sent to program, expected script path" << std::endl;
+		std::cout << "\n[ERROR] incorrect arguments sent to program, expected path to script-folder" << std::endl;
 		return 1;
 	}
 
@@ -2334,10 +2336,12 @@ int main(int argc, char** argv)
 				script.Run();
 			}
 		}
-	})
+	});
+
+	Script::workingDirectory = argv[1];
 
 	Script s;
-	if (s.LoadScript(argv[1]))
+	if (s.LoadScript("main.funky"))
 	{
 		s.Run();
 	}

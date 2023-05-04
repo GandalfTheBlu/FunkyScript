@@ -1,47 +1,55 @@
 
-#include "C:\Users\Gandalf\Documents\VS CODE\Funky_git\FunkyScript\Script\std_macros.funky"
+#include "std_macros.funky"
 
 do
 (
-	struct my_obj12s{
-		"name" "Gref"
-		"age" 21
-		"height" 1.92
-		"married" false
-		"func" lambda("#s" print("Gref says: " get("#s")))
-		"func2" lambda(print("in\n"))
+	map obj{
+		"name" "Baboom-Man"
+		"age" 1300
+		"height" 3.1415
+		"man" true
+		"func1" lambda(print("hello\n"))
+		"func2" lambda("_s" function(
+			if(equal(get("_s") "hello") 
+				print("hello to you\n")
+			if(equal(get("_s") "bye")
+				print("goodbye to you\n")
+			do(
+				print("what?\n")
+			)))
+		))
 	};
 	
-	vlog: my_obj12s;
-	print(my_obj12s.name; "\n")
-	
-	my_obj12s.func("hello there\n");
-	my_obj12s.func2();
-	
-	i = 0;
-	i++;
-	i += 2;
-	vlog: i;
-	
-	s = "hello";
-	s += " world";
-	vlog: s;
-	
+	vlog: obj;
+	obj.func1();
+	obj.func2("bye");
+
 	j = 0;
-	while(j < i; do(
+	i = 10;
+	while(j <= i; do(
 		vlog: j;
 		j++;
 	))
 	
-	j = 0;
-	while(j < 10; do(
-		vlog: j;
-		j++;
+	def("vec_sum" "_a" "_b" function(
+		// find smallest vector
+		_ac = count(get("_a"));
+		_bc = count(get("_b"));
+		_count = _ac;
+		if(_bc < _ac; _count = _bc;)
+		// add elements
+		_i = 0;
+		set_copy("_c" list)
+		while(_i < _count; do(
+			_sum = add(get_elem(get("_a") get("_i")) get_elem(get("_b") get("_i")));
+			push_copy(get("_c") get("_sum"))
+			_i++;
+		))
+		
+		return_ref(get("_c"))
 	))
 	
-	if(j > 8; print("j is bigger than 8\n"))
-	
-	if(j == 10; print("j is equal to 10\n"))
-	if(j == j; print("j is equal to j\n"))
-	if(j != 12; print("j is not equal to 12\n"))
+	list v1{ 1 2.2 3 "hello " };
+	list v2{ 4 5.2 6 "world!" };
+	print(.vec_sum(get("v1") get("v2"));)
 )

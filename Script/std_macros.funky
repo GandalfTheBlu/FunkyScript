@@ -1,12 +1,17 @@
-
 // function call on object
 #macro ($name)\.($name)\(($any)\)\; eval(get_elem(get("$1") "$2") $3)
 
 // get element from object
 #macro ($name)\.($name)\; get_elem(get("$1") "$2")
 
-// define struct
-#macro struct\s($name)\{($some)\}\; set_copy("$1" map) push_copy(get("$1") $2)
+// function call in global space
+#macro \.($name)\(($any)\)\; get("$1" $2)
+
+// define list
+#macro list\s($name)\{($some)\}\; set_copy("$1" list) push_copy(get("$1") $2)
+
+// define map
+#macro map\s($name)\{($some)\}\; set_copy("$1" map) push_copy(get("$1") $2)
 
 // copy assign operator
 #macro ($name)\s\=\s($name)\; set_copy("$1" get("$2"))
@@ -35,11 +40,19 @@
 #macro ($name)\s\>\s($name)\; less(get("$2") get("$1"))
 #macro ($name)\s\>\s($some)\; less($2 get("$1"))
 
-// equel comparison
+// less or equal comparison
+#macro ($name)\s\<\=\s($name)\; or(less(get("$1") get("$2")) equal(get("$1") get("$2")))
+#macro ($name)\s\<\=\s($some)\; or(less(get("$1") $2) equal(get("$1") $2))
+
+// greater or equal comparison
+#macro ($name)\s\>\=\s($name)\; or(less(get("$2") get("$1")) equal(get("$2") get("$1")))
+#macro ($name)\s\>\=\s($some)\; or(less($2 get("$1")) equal($2 get("$1")))
+
+// equal comparison
 #macro ($name)\s\=\=\s($name)\; equal(get("$1") get("$2"))
 #macro ($name)\s\=\=\s($some)\; equal(get("$1") $2)
 
-// not equel comparison
+// not equal comparison
 #macro ($name)\s\!\=\s($name)\; not(equal(get("$1") get("$2")))
 #macro ($name)\s\!\=\s($some)\; not(equal(get("$1") $2))
 

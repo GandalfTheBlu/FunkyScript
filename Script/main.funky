@@ -1,6 +1,6 @@
 
 do(
 	print("\n---running---\n\n")
-	call_cpp("run" "C:\Users\Gandalf\Documents\VS CODE\Funky_git\FunkyScript\Script\baboom.funky")
+	call_cpp("run" "baboom.funky")
 	print("\n---completed---\n\n")
 )
