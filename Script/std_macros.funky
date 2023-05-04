@@ -8,17 +8,17 @@
 #macro \.($name)\(($any)\)\; get("$1" $2)
 
 // define list
-#macro list\s($name)\{($some)\}\; set_copy("$1" list) push_copy(get("$1") $2)
+#macro list\s($name)\s*\{($any)\}\; set_copy("$1" list) push_copy(get("$1") $2)
 
 // define map
-#macro map\s($name)\{($some)\}\; set_copy("$1" map) push_copy(get("$1") $2)
+#macro map\s($name)\s*\{($any)\}\; set_copy("$1" map) push_copy(get("$1") $2)
 
 // copy assign operator
 #macro ($name)\s\=\s($name)\; set_copy("$1" get("$2"))
-#macro ($name)\s\=\s($some)\; set_copy("$1" $2)
+#macro ($name)\s\=\s($any)\; set_copy("$1" $2)
 
 // reference assign operator
-#macro ($name)\sr\=\s($some)\; set_ref("$1" $2)
+#macro ($name)\sr\=\s($any)\; set_ref("$1" $2)
 
 // increment operator
 #macro ($name)\+\+\; set_copy("$1" add(get("$1") 1))
@@ -27,34 +27,34 @@
 #macro ($name)\-\-\; set_copy("$1" sub(get("$1") 1))
 
 // add-assign operator
-#macro ($name)\s\+\=($some)\; set_copy("$1" add(get("$1") $2))
+#macro ($name)\s\+\=($any)\; set_copy("$1" add(get("$1") $2))
 
 // subtract-assign operator
-#macro ($name)\s\-\=($some)\; set_copy("$1" sub(get("$1") $2))
+#macro ($name)\s\-\=($any)\; set_copy("$1" sub(get("$1") $2))
 
 // less comparison
 #macro ($name)\s\<\s($name)\; less(get("$1") get("$2"))
-#macro ($name)\s\<\s($some)\; less(get("$1") $2)
+#macro ($name)\s\<\s($any)\; less(get("$1") $2)
 
 // greater comparison
 #macro ($name)\s\>\s($name)\; less(get("$2") get("$1"))
-#macro ($name)\s\>\s($some)\; less($2 get("$1"))
+#macro ($name)\s\>\s($any)\; less($2 get("$1"))
 
 // less or equal comparison
 #macro ($name)\s\<\=\s($name)\; or(less(get("$1") get("$2")) equal(get("$1") get("$2")))
-#macro ($name)\s\<\=\s($some)\; or(less(get("$1") $2) equal(get("$1") $2))
+#macro ($name)\s\<\=\s($any)\; or(less(get("$1") $2) equal(get("$1") $2))
 
 // greater or equal comparison
 #macro ($name)\s\>\=\s($name)\; or(less(get("$2") get("$1")) equal(get("$2") get("$1")))
-#macro ($name)\s\>\=\s($some)\; or(less($2 get("$1")) equal($2 get("$1")))
+#macro ($name)\s\>\=\s($any)\; or(less($2 get("$1")) equal($2 get("$1")))
 
 // equal comparison
 #macro ($name)\s\=\=\s($name)\; equal(get("$1") get("$2"))
-#macro ($name)\s\=\=\s($some)\; equal(get("$1") $2)
+#macro ($name)\s\=\=\s($any)\; equal(get("$1") $2)
 
 // not equal comparison
 #macro ($name)\s\!\=\s($name)\; not(equal(get("$1") get("$2")))
-#macro ($name)\s\!\=\s($some)\; not(equal(get("$1") $2))
+#macro ($name)\s\!\=\s($any)\; not(equal(get("$1") $2))
 
 // log variable to console
 #macro vlog\:\s($name)\; print(get("$1") "\n")

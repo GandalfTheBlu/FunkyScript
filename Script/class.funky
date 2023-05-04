@@ -3,31 +3,17 @@
 do
 (
 	def("Cat" "_name" "_age" "_color" function(
-		
-		def("_feed" "_food" function(
-			if(_food == "rat";
-				print("just gonna play with it!\n")
-			if(_food == "bird"; 
-				print("mmmh! gonna eat it whole!\n")
-			do(
-				print("not gonna eat that!\n")
-			)))
-		))
-	
-		map _cat{
+		map _cat
+		{
 			"name" get("_name")
 			"age" get("_age")
 			"color" get("_color")
-			"make_sound" lambda(print("mjau\n"))
-			"feed" ref_func("_feed")
+			"make_sound" lambda(print("mjeu!\n"))
 		};
-		return_ref(get("_cat"));
+		return_ref(get("_cat"))
 	))
 	
-	set_copy("tolo" .Cat("Tolo" 10 "gray");)
-	vlog: tolo;
-	tolo.make_sound();
-	tolo.feed("rat");
-	tolo.feed("bird");
-	tolo.feed("cat-food");
+	set_copy("cat" .Cat("Tolo" 10 "gray");)
+	vlog: cat;
+	cat.make_sound();
 )

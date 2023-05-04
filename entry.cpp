@@ -2009,7 +2009,7 @@ struct Script
 				size_t macroStartIndex = sourceCode.index;
 				sourceCode.MoveAlong(6);
 
-				std::string regexStr = "(^(?!\\s*#macro).*?)";// ignore lines that start with #macro
+				std::string regexStr;
 				bool goNext = true;
 				char c;
 				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
@@ -2021,26 +2021,14 @@ struct Script
 					return false;
 				}
 
-				std::string s = regexStr;
-
 				std::regex rgxName("(\\$name)");
 				std::regex rgxAny("(\\$any)");
-				std::regex rgxSome("(\\$some)");
 				regexStr = std::regex_replace(regexStr, rgxName, "[a-zA-Z_][a-zA-Z0-9_]*", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxAny, "((?:\\\".*?\\\"|[a-zA-Z0-9\\._\\(\\)\\s])*)", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxSome, "((?:\\\".*?\\\"|[a-zA-Z0-9\\._\\(\\)\\s])+)", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxAny, "[\\S\\s]*?", std::regex_constants::format_default);
 
-				std::string expansionStr = "$1";// always re-insert the first part that is leading up to the expression
-				bool lastWasDollarSign = false;
+				std::string expansionStr;
 				for (; sourceCode.NextChar() && (c = sourceCode.CurrentChar()) != '\n';)
-				{
-					expansionStr += (c + lastWasDollarSign);
-
-					if (c == '$')
-						lastWasDollarSign = true;
-					else
-						lastWasDollarSign = false;
-				}
+					expansionStr += c;
 
 				std::string restOfText = sourceCode.Substring(sourceCode.index, sourceCode.text.size()-1);
 				std::string result;
