@@ -1,6 +1,6 @@
 
 do(
 	print("\n\n---running---\n\n")
-	call_cpp("run" "new_macros.funky")
+	call_cpp("run" "macro_tester.funky")
 	print("\n\n---completed---\n\n")
 )

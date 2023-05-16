@@ -1719,12 +1719,21 @@ struct FunctionLibrary
 		Data* right = self->arguments[1]->Evaluate();
 		AFFIRM_DATA(right)
 
-		if ((t = left->type) != right->type || (t != DataType::Int && t != DataType::Float && t != DataType::String))
+		if ((t = left->type) != right->type || (t != DataType::Bool && t != DataType::Int && t != DataType::Float && t != DataType::String))
 		{
 			left->token.sourceCodePtr->PrintError(left->token, "type mismatch");
 			return;
 		}
 
+		if (t == DataType::Bool)
+		{
+			Value<Bool>* b_left = dynamic_cast<Value<Bool>*>(left);
+			Value<Bool>* b_right = dynamic_cast<Value<Bool>*>(right);
+
+			Value<Bool>* comp = new Value<Bool>(DataType::Bool, false, b_left->token);
+			comp->SetValue(*b_left->valuePtr == *b_right->valuePtr);
+			self->returnValue = comp;
+		}
 		if (t == DataType::Float)
 		{
 			Value<Float>* f_left = dynamic_cast<Value<Float>*>(left);
@@ -1984,6 +1993,12 @@ struct Script
 
 	bool ApplyPreprocessing()
 	{
+		bool printExpanded = sourceCode.BeginsWith("#print_expanded");
+		if (printExpanded)
+		{
+			sourceCode.text.erase(0, 15);
+		}
+
 		while (true)
 		{
 			if (sourceCode.BeginsWith("/*"))
@@ -2031,13 +2046,14 @@ struct Script
 					result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
 				}
 				catch (const std::regex_error& e) {
-					sourceCode.PrintErrorAtCurrentIndex(e.what());
+					sourceCode.PrintErrorAtCurrentIndex("regex: " + regexStr + " " + e.what());
 					return false;
 				}
 
 				sourceCode.text.resize(macroStartIndex);
 				sourceCode.text.append(result.begin(), result.end());
 				sourceCode.index = macroStartIndex;
+				continue;
 			}
 			else if (sourceCode.BeginsWith("#include"))
 			{
@@ -2074,10 +2090,16 @@ struct Script
 				sourceCode.text.erase(includeStartIndex, sourceCode.index - includeStartIndex + 1);
 				sourceCode.text.insert(sourceCode.text.begin() + includeStartIndex, includeCode.text.begin(), includeCode.text.end());
 				sourceCode.index = includeStartIndex;
+				continue;
 			}
 
 			if (!sourceCode.NextChar())
 				break;
+		}
+
+		if (printExpanded)
+		{
+			printf("[INFO] expanded code:\n%s\n", sourceCode.text.c_str());
 		}
 
 		std::regex newlineRgx("(\\\\n)");

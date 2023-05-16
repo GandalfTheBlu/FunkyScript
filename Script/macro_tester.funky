@@ -1,0 +1,34 @@
+#include "std_macros.funky"
+
+do
+(
+	def("Cat" "_name" "_age" "_color" function
+	(
+		map _cat 
+		{
+			"name" ._name
+			"age" ._age
+			"color" ._color
+			"MakeSound" lambda(print("mjau\n"))
+			"SayName" lambda("this" function
+			(
+				print("My name is " this["name"] "\n")
+			))
+			"CanEat" lambda("this" "_food" function
+			(
+				return_copy([._food == "cat-food"])
+			))
+		}
+		
+		return_copy(._cat)
+	))
+	
+	cat = :Cat("Tolo" 10 "gray");
+	print(.cat "\n")
+	
+	cat->MakeSound()
+	cat->SayName()
+	canEat1 = cat->CanEat("dog-food");
+	canEat2 = cat->CanEat("cat-food");
+	print(.canEat1 " " .canEat2 "\n")
+)
