@@ -618,7 +618,6 @@ bool SourceCode::BeginsWith(const std::string& str)
 
 std::unordered_map<std::string, void(*)(List&)> scriptFunctions;
 
-#define SCRIPT_FUNCTION(name, body) scriptFunctions[name] = [](List& args)body
 #define AFFIRM_DATA(data) if(data == nullptr){return;}
 
 struct FunctionLibrary
@@ -668,15 +667,7 @@ struct FunctionLibrary
 
 	static void Helper_PrintString(Data* data)
 	{
-		const String& s = *dynamic_cast<Value<String>*>(data)->valuePtr;
-		
-		for (int i = 0; i < s.size(); i++)
-		{
-			if (s[i] == '\\' && i+1 < s.size() && s[++i] == 'n')
-				std::cout << std::endl;
-			else 
-				std::cout << s[i];
-		}
+		std::cout << *dynamic_cast<Value<String>*>(data)->valuePtr;
 	}
 
 	static void Helper_PrintList(Data* data)
@@ -1025,7 +1016,8 @@ struct FunctionLibrary
 
 			Value<String>* val = new Value<String>(DataType::String, false, first->token);
 			std::string s;
-			s += str->valuePtr->at(i);
+			s = str->valuePtr->at(i);
+
 			val->SetValue(s);
 			self->returnValue = val;
 		}
@@ -2088,6 +2080,11 @@ struct Script
 				break;
 		}
 
+		std::regex newlineRgx("(\\\\n)");
+		sourceCode.text = std::regex_replace(sourceCode.text, newlineRgx, "\n", std::regex_constants::format_default);
+		std::regex tabRgx("(\\\\t)");
+		sourceCode.text = std::regex_replace(sourceCode.text, tabRgx, "\t", std::regex_constants::format_default);
+
 		sourceCode.Reset();
 		return true;
 	}
@@ -2308,7 +2305,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	SCRIPT_FUNCTION("run", {
+	scriptFunctions["run"] = [](List& args)
+	{
 		if (args.size() != 1)
 			return;
 
@@ -2324,7 +2322,39 @@ int main(int argc, char** argv)
 				script.Run();
 			}
 		}
-	});
+	};
+
+	scriptFunctions["read_txt"] = [](List& args)
+	{
+		if (args.size() != 2)
+			return;
+
+		Data* first = args[0]->Evaluate();
+		AFFIRM_DATA(first)
+
+		Data* second = args[1]->Evaluate();
+		AFFIRM_DATA(second)
+
+		if (first->AffirmSameType(DataType::String) && second->AffirmSameType(DataType::String))
+		{
+			std::string path = Script::workingDirectory + *dynamic_cast<Value<String>*>(first)->valuePtr;
+			std::string& text = *dynamic_cast<Value<String>*>(second)->valuePtr;
+			std::ifstream file;
+			file.open(path);
+
+			if (file.is_open())
+			{
+				std::stringstream stringStream;
+				stringStream << file.rdbuf();
+				text = stringStream.str();
+				file.close();
+
+				return;
+			}
+
+			LogError("failed to open file '" + path + "'");
+		}
+	};
 
 	Script::workingDirectory = argv[1];
 

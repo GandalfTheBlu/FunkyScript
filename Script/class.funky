@@ -3,12 +3,18 @@
 do
 (
 	def("Cat" "_name" "_age" "_color" function(
+		
+		def("print_age" "this" function(
+			print(this.age;)
+		))
+		
 		map _cat
 		{
 			"name" get("_name")
 			"age" get("_age")
 			"color" get("_color")
 			"make_sound" lambda(print("mjeu!\n"))
+			"print_age" ref_func("print_age")
 		};
 		return_ref(get("_cat"))
 	))
@@ -16,4 +22,5 @@ do
 	set_copy("cat" .Cat("Tolo" 10 "gray");)
 	vlog: cat;
 	cat.make_sound();
+	cat.print_age(get("cat"));
 )
