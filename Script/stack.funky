@@ -1,0 +1,23 @@
+// requires #include "std_macros.txt"
+
+def("Stack" function(
+	map _obj
+	{
+		"stack" list
+		"Push" method("_item" function(
+			_stack r= this["stack"];
+			_stack << ._item;
+		))
+		"Pop" method(function(
+			_stack r= this["stack"];
+			_item r= _stack[-1];
+			rem_elem(._stack -1)
+			return_ref(._item)
+		))
+		"Count" method(function(
+			return_copy(count(this["stack"]))
+		))
+	}
+	
+	return_ref(._obj)
+))

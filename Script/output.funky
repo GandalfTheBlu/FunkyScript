@@ -1,0 +1,67 @@
+
+
+do
+(
+	
+
+def("Stack" function(
+	set_copy("_obj" map) push_copy(get("_obj") 
+		"stack" list
+		"Push" lambda("this" "_item" function(
+			set_ref("_stack" get_elem(get("this") "stack"))
+			push_copy(get("_stack") get("_item"))
+		))
+		"Pop" lambda("this" function(
+			set_ref("_stack" get_elem(get("this") "stack"))
+			set_ref("_item" get_elem(get("_stack") -1))
+			rem_elem(get("_stack") -1)
+			return_ref(get("_item"))
+		))
+		"Count" lambda("this" function(
+			return_copy(count(get_elem(get("this") "stack")))
+		))
+	)
+	
+	return_ref(get("_obj"))
+))	
+
+def("Queue" function(
+	set_copy("_obj" map) push_copy(get("_obj") 
+		"queue" list
+		"Push" lambda("this" "_item" function(
+			set_ref("_queue" get_elem(get("this") "queue"))
+			push_copy(get("_queue") get("_item"))
+		))
+		"Pop" lambda("this" function(
+			set_ref("_queue" get_elem(get("this") "queue"))
+			set_ref("_item" get_elem(get("_queue") 0))
+			rem_elem(get("_queue") 0)
+			return_ref(get("_item"))
+		))
+		"Count" lambda("this" function(
+			return_copy(count(get_elem(get("this") "queue")))
+		))
+	)
+	
+	return_ref(get("_obj"))
+))	
+	set_ref("stack" get("Stack" ))
+	eval(get_elem(get("stack") "Push") get("stack") 1)
+	eval(get_elem(get("stack") "Push") get("stack") 2)
+	eval(get_elem(get("stack") "Push") get("stack") 3)
+	print(get("stack") "\n")
+	
+	while(less(0 eval(get_elem(get("stack") "Count") get("stack") )) do(
+		print(eval(get_elem(get("stack") "Pop") get("stack") ) "\n")
+	))
+	
+	set_ref("queue" get("Queue" ))
+	eval(get_elem(get("queue") "Push") get("queue") 1)
+	eval(get_elem(get("queue") "Push") get("queue") 2)
+	eval(get_elem(get("queue") "Push") get("queue") 3)
+	print(get("queue") "\n")
+	
+	while(less(0 eval(get_elem(get("queue") "Count") get("queue") )) do(
+		print(eval(get_elem(get("queue") "Pop") get("queue") ) "\n")
+	))
+)

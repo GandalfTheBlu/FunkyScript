@@ -2,6 +2,7 @@
 #macro \:($name)\((.*?)\) get("$1" $2)
 #macro ($name)\[(.*?)\] get_elem(get("$1") $2)
 #macro ($name)\-\>($name)\((.*?)\) eval(get_elem(get("$1") "$2") get("$1") $3)
+#macro method\( lambda("this" 
 #macro list\s($name)\s*\{($any)\} set_copy("$1" list) push_copy(get("$1") $2)
 #macro map\s($name)\s*\{($any)\} set_copy("$1" map) push_copy(get("$1") $2)
 

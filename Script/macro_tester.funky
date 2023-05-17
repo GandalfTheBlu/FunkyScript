@@ -1,34 +1,28 @@
+#log_expanded "output.funky"
 #include "std_macros.funky"
 
 do
 (
-	def("Cat" "_name" "_age" "_color" function
-	(
-		map _cat 
-		{
-			"name" ._name
-			"age" ._age
-			"color" ._color
-			"MakeSound" lambda(print("mjau\n"))
-			"SayName" lambda("this" function
-			(
-				print("My name is " this["name"] "\n")
-			))
-			"CanEat" lambda("this" "_food" function
-			(
-				return_copy([._food == "cat-food"])
-			))
-		}
-		
-		return_copy(._cat)
+	#include "stack.funky"
+	#include "queue.funky"
+	
+	stack r= :Stack();
+	stack->Push(1)
+	stack->Push(2)
+	stack->Push(3)
+	print(.stack "\n")
+	
+	while([stack->Count() > 0] do(
+		print(stack->Pop() "\n")
 	))
 	
-	cat = :Cat("Tolo" 10 "gray");
-	print(.cat "\n")
+	queue r= :Queue();
+	queue->Push(1)
+	queue->Push(2)
+	queue->Push(3)
+	print(.queue "\n")
 	
-	cat->MakeSound()
-	cat->SayName()
-	canEat1 = cat->CanEat("dog-food");
-	canEat2 = cat->CanEat("cat-food");
-	print(.canEat1 " " .canEat2 "\n")
+	while([queue->Count() > 0] do(
+		print(queue->Pop() "\n")
+	))
 )

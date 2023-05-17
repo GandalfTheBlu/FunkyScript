@@ -960,7 +960,7 @@ struct FunctionLibrary
 			
 			int i = 0;
 			if (*index->valuePtr == -1)
-				i = list->valuePtr->size() - 1;
+				i = (int)list->valuePtr->size() - 1;
 			else
 				i = *index->valuePtr;
 
@@ -1004,7 +1004,7 @@ struct FunctionLibrary
 
 			int i = 0;
 			if (*index->valuePtr == -1)
-				i = str->valuePtr->size() - 1;
+				i = (int)str->valuePtr->size() - 1;
 			else
 				i = *index->valuePtr;
 
@@ -1048,7 +1048,9 @@ struct FunctionLibrary
 
 			int i = 0;
 			if (*index->valuePtr == -1)
-				i = list->valuePtr->size() - 1;
+				i = (int)list->valuePtr->size() - 1;
+			else
+				i = *index->valuePtr;
 
 			if (i < 0 || i >= list->valuePtr->size())
 			{
@@ -1096,7 +1098,7 @@ struct FunctionLibrary
 
 			int i = 0;
 			if (*index->valuePtr == -1)
-				i = str->valuePtr->size() - 1;
+				i = (int)str->valuePtr->size() - 1;
 			else
 				i = *index->valuePtr;
 
@@ -1968,6 +1970,8 @@ struct Script
 {
 	static std::string workingDirectory;
 	SourceCode sourceCode;
+	int nextHiddenStringIndex = 0;
+	std::unordered_map<std::string, std::string> hiddenStrings;
 	FunctionLibrary functionLibrary;
 	Value<Function>* rootFunction;
 
@@ -1991,14 +1995,8 @@ struct Script
 		return IsWhitespace(c) || c == '(' || c == ')';
 	}
 
-	bool ApplyPreprocessing()
+	bool ApplyIncludes()
 	{
-		bool printExpanded = sourceCode.BeginsWith("#print_expanded");
-		if (printExpanded)
-		{
-			sourceCode.text.erase(0, 15);
-		}
-
 		while (true)
 		{
 			if (sourceCode.BeginsWith("/*"))
@@ -2011,49 +2009,9 @@ struct Script
 			{
 				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
 			}
-			else if (sourceCode.BeginsWith("#macro"))
+			else if (sourceCode.CurrentChar() == '"')
 			{
-				size_t macroStartIndex = sourceCode.index;
-				sourceCode.MoveAlong(6);
-
-				std::string regexStr;
-				bool goNext = true;
-				char c;
-				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
-					regexStr += c;
-
-				if (!goNext)
-				{
-					sourceCode.PrintErrorAtCurrentIndex("incomplete macro");
-					return false;
-				}
-
-				std::regex rgxName("(\\$name)");
-				std::regex rgxAny("(\\$any)");
-				regexStr = std::regex_replace(regexStr, rgxName, "[a-zA-Z_][a-zA-Z0-9_]*", std::regex_constants::format_default);
-				regexStr = std::regex_replace(regexStr, rgxAny, "[\\S\\s]*?", std::regex_constants::format_default);
-
-				std::string expansionStr;
-				for (; sourceCode.NextChar() && (c = sourceCode.CurrentChar()) != '\n';)
-					expansionStr += c;
-
-				std::string restOfText = sourceCode.Substring(sourceCode.index, sourceCode.text.size()-1);
-				std::string result;
-
-				try
-				{
-					std::regex rgx(regexStr);
-					result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
-				}
-				catch (const std::regex_error& e) {
-					sourceCode.PrintErrorAtCurrentIndex("regex: " + regexStr + " " + e.what());
-					return false;
-				}
-
-				sourceCode.text.resize(macroStartIndex);
-				sourceCode.text.append(result.begin(), result.end());
-				sourceCode.index = macroStartIndex;
-				continue;
+				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '"';);
 			}
 			else if (sourceCode.BeginsWith("#include"))
 			{
@@ -2087,7 +2045,7 @@ struct Script
 					return false;
 				}
 
-				sourceCode.text.erase(includeStartIndex, sourceCode.index - includeStartIndex + 1);
+				sourceCode.text.erase(includeStartIndex, sourceCode.index - includeStartIndex + 2);
 				sourceCode.text.insert(sourceCode.text.begin() + includeStartIndex, includeCode.text.begin(), includeCode.text.end());
 				sourceCode.index = includeStartIndex;
 				continue;
@@ -2097,9 +2055,172 @@ struct Script
 				break;
 		}
 
-		if (printExpanded)
+		sourceCode.Reset();
+		return true;
+	}
+
+	void HideStrings()
+	{
+		while (true)
 		{
-			printf("[INFO] expanded code:\n%s\n", sourceCode.text.c_str());
+			if (sourceCode.BeginsWith("/*"))
+			{
+				for (; sourceCode.NextChar() && !sourceCode.BeginsWith("*/"););
+
+				sourceCode.NextChar();
+			}
+			else if (sourceCode.BeginsWith("//"))
+			{
+				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
+			}
+			else if (sourceCode.BeginsWith("#macro"))
+			{
+				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '\n';);
+			}
+			else if (sourceCode.CurrentChar() == '"')
+			{
+				int startIndex = sourceCode.index;
+				std::string str = "\"";
+				for (; sourceCode.NextChar() && sourceCode.CurrentChar() != '"';)
+				{
+					str += sourceCode.CurrentChar();
+				}
+				str += "\"";
+				int endIndex = sourceCode.index;
+				std::string key = "@" + std::to_string(nextHiddenStringIndex++) + "@";
+				hiddenStrings[key] = str;
+
+				sourceCode.text.erase(startIndex, endIndex - startIndex + 1);
+				sourceCode.text.insert(sourceCode.text.begin() + startIndex, key.begin(), key.end());
+				sourceCode.index = startIndex + key.size();
+			}
+
+			if (!sourceCode.NextChar())
+				break;
+		}
+
+		sourceCode.Reset();
+	}
+
+	void RemoveComments()
+	{
+		std::regex commentsRgx("(?:\\/\\/.*)|(?:\\/\\*[\\S\\s]*\\*\\/)");
+		sourceCode.text = std::regex_replace(sourceCode.text, commentsRgx, "", std::regex_constants::format_default);
+	}
+
+	bool ApplyMacros()
+	{
+		while (true)
+		{
+			if (sourceCode.BeginsWith("#macro"))
+			{
+				size_t macroStartIndex = sourceCode.index;
+				sourceCode.MoveAlong(6);
+
+				std::string regexStr;
+				bool goNext = true;
+				char c;
+				for (; (goNext = sourceCode.NextChar()) && !IsWhitespace(c = sourceCode.CurrentChar());)
+					regexStr += c;
+
+				if (!goNext)
+				{
+					sourceCode.PrintErrorAtCurrentIndex("incomplete macro");
+					return false;
+				}
+
+				std::regex rgxName("(\\$name)");
+				std::regex rgxAny("(\\$any)");
+				regexStr = std::regex_replace(regexStr, rgxName, "[a-zA-Z_][a-zA-Z0-9_]*", std::regex_constants::format_default);
+				regexStr = std::regex_replace(regexStr, rgxAny, "[\\S\\s]*?", std::regex_constants::format_default);
+				
+				std::string expansionStr;
+				for (; sourceCode.NextChar() && (c = sourceCode.CurrentChar()) != '\n';)
+					expansionStr += c;
+
+				std::string restOfText = sourceCode.Substring(sourceCode.index+1, sourceCode.text.size() - 1);
+				std::string result;
+
+				try
+				{
+					std::regex rgx(regexStr);
+					result = std::regex_replace(restOfText, rgx, expansionStr, std::regex_constants::format_default);
+				}
+				catch (const std::regex_error& e) {
+					sourceCode.PrintErrorAtCurrentIndex("regex: " + regexStr + " " + e.what());
+					return false;
+				}
+
+				sourceCode.text.resize(macroStartIndex);
+				sourceCode.text.append(result.begin(), result.end());
+				sourceCode.index = macroStartIndex;
+				continue;
+			}
+
+			if (!sourceCode.NextChar())
+				break;
+		}
+
+		sourceCode.Reset();
+		return true;
+	}
+
+	void ShowStrings()
+	{
+		for (auto& str : hiddenStrings)
+		{
+			std::regex strRgx("(" + str.first + ")");
+			sourceCode.text = std::regex_replace(sourceCode.text, strRgx, str.second, std::regex_constants::format_default);
+		}
+	}
+
+	bool ApplyPreprocessing()
+	{
+		bool logExpanded = sourceCode.BeginsWith("#log_expanded");
+		std::string logFilename;
+		if (logExpanded)
+		{
+			sourceCode.MoveAlong(13);
+			char c;
+			for (; (c = sourceCode.CurrentChar()) != '"' && c != '\n' && sourceCode.NextChar(););
+			
+			if (c == '"')
+			{
+				sourceCode.NextChar();
+				for (; (c = sourceCode.CurrentChar()) != '"' && sourceCode.NextChar();)
+					logFilename += c;
+
+				for (; sourceCode.CurrentChar() != '\n' && sourceCode.NextChar(););
+			}
+
+			sourceCode.text.erase(0, sourceCode.index + 1);
+			sourceCode.Reset();
+		}
+
+		if (!ApplyIncludes())
+			return false;
+
+		HideStrings();
+		RemoveComments();
+
+		if (!ApplyMacros())
+			return false;
+
+		ShowStrings();
+
+		if (logExpanded)
+		{
+			if(logFilename.size() == 0)
+				printf("[INFO] preprocessed code:\n%s\n", sourceCode.text.c_str());
+			else
+			{
+				logFilename = workingDirectory + logFilename;
+				std::ofstream logFile;
+				logFile.open(logFilename);
+				logFile << sourceCode.text;
+				logFile.close();
+				printf("[INFO] preprocessed code logged to %s\n", logFilename.c_str());
+			}
 		}
 
 		std::regex newlineRgx("(\\\\n)");

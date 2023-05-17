@@ -1,0 +1,23 @@
+// requires #include "std_macros.funky"
+
+def("Queue" function(
+	map _obj
+	{
+		"queue" list
+		"Push" method("_item" function(
+			_queue r= this["queue"];
+			_queue << ._item;
+		))
+		"Pop" method(function(
+			_queue r= this["queue"];
+			_item r= _queue[0];
+			rem_elem(._queue 0)
+			return_ref(._item)
+		))
+		"Count" method(function(
+			return_copy(count(this["queue"]))
+		))
+	}
+	
+	return_ref(._obj)
+))
