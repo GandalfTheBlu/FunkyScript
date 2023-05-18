@@ -6,6 +6,7 @@ do
 
 def("Stack" function(
 	set_copy("_obj" map) push_copy(get("_obj") 
+		"__type__" "Stack"
 		"stack" list
 		"Push" lambda("this" "_item" function(
 			set_ref("_stack" get_elem(get("this") "stack"))
@@ -27,6 +28,7 @@ def("Stack" function(
 
 def("Queue" function(
 	set_copy("_obj" map) push_copy(get("_obj") 
+		"__type__" "Queue"
 		"queue" list
 		"Push" lambda("this" "_item" function(
 			set_ref("_queue" get_elem(get("this") "queue"))
@@ -40,6 +42,34 @@ def("Queue" function(
 		))
 		"Count" lambda("this" function(
 			return_copy(count(get_elem(get("this") "queue")))
+		))
+	)
+	
+	return_ref(get("_obj"))
+))	
+
+def("TMap" function(
+	set_copy("_obj" map) push_copy(get("_obj") 
+		"__type__" "TMap"
+		"map" map
+		"Set" lambda("this" "_key" "_val" function(
+			set_ref("_map" get_elem(get("this") "map"))
+			push_copy(get("_map") to_string(get("_key")) get("_val"))
+		))
+		"Get" lambda("this" "_key" function(
+			set_ref("_map" get_elem(get("this") "map"))
+			return_ref(get_elem(get("_map") to_string(get("_key"))))
+		))
+		"Remove" lambda("this" "_key" function(
+			set_ref("_map" get_elem(get("this") "map"))
+			rem_elem(get("_map") to_string(get("_key")))
+		))
+		"Contains" lambda("this" "_key" function(
+			set_ref("_map" get_elem(get("this") "map"))
+			return_copy(has_key(get("_map") to_string(get("_key"))))
+		))
+		"Keys" lambda("this" function(
+			return_ref(keys(get_elem(get("this") "map")))
 		))
 	)
 	
@@ -64,4 +94,18 @@ def("Queue" function(
 	while(less(0 eval(get_elem(get("queue") "Count") get("queue") )) do(
 		print(eval(get_elem(get("queue") "Pop") get("queue") ) "\n")
 	))
+	
+	set_ref("tmap" get("TMap" ))
+	eval(get_elem(get("tmap") "Set") get("tmap") "1" "val1")
+	eval(get_elem(get("tmap") "Set") get("tmap") 2 "val2")
+	eval(get_elem(get("tmap") "Set") get("tmap") 3.0 "val3")
+	print(get("tmap") "\n")
+	
+	print(eval(get_elem(get("tmap") "Get") get("tmap") 1) "\n")
+	print(eval(get_elem(get("tmap") "Get") get("tmap") "2") "\n")
+	print(eval(get_elem(get("tmap") "Get") get("tmap") 3.0) "\n")
+	print(eval(get_elem(get("tmap") "Contains") get("tmap") 1) "\n")
+	eval(get_elem(get("tmap") "Remove") get("tmap") "1")
+	print(eval(get_elem(get("tmap") "Contains") get("tmap") 1) "\n")
+	print(eval(get_elem(get("tmap") "Keys") get("tmap") ) "\n")
 )

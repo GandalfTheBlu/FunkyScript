@@ -934,7 +934,13 @@ struct FunctionLibrary
 
 				val->CreateSameType(copy);
 				copy->ReferenceOther(val);
-				map->valuePtr->insert({ *keyStr->valuePtr, copy });
+
+				if (map->valuePtr->count(*keyStr->valuePtr) != 0)
+				{
+					delete map->valuePtr->at(*keyStr->valuePtr);
+				}
+
+				map->valuePtr->at(*keyStr->valuePtr) = copy;
 			}
 		}
 	}
@@ -1114,6 +1120,29 @@ struct FunctionLibrary
 		{
 			first->token.sourceCodePtr->PrintError(first->token, "expected list or map");
 		}
+	}
+
+	static void F_HasKey(Function* self)
+	{
+		if (!self->CheckArgumens(2))
+			return;
+
+		Data* first = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(first)
+
+		Data* second = self->arguments[1]->Evaluate();
+		AFFIRM_DATA(second)
+
+		if (!first->AffirmSameType(DataType::Map) || !second->AffirmSameType(DataType::String))
+			return;
+
+		Value<Map>* map = dynamic_cast<Value<Map>*>(first);
+		Value<String>* str = dynamic_cast<Value<String>*>(second);
+		bool contains = (map->valuePtr->count(*str->valuePtr) != 0);
+
+		Value<Bool>* ret_val = new Value<Bool>(DataType::Bool, false, first->token);
+		ret_val->SetValue(contains);
+		self->returnValue = ret_val;
 	}
 
 	static void F_DefineFunction(Function* self)
@@ -1385,6 +1414,54 @@ struct FunctionLibrary
 		}
 	}
 
+	static void F_TypeOf(Function* self)
+	{
+		if (!self->CheckArgumens(1))
+			return;
+
+		Data* data = self->arguments[0]->Evaluate();
+		AFFIRM_DATA(data)
+
+		static std::string typeNames[]
+		{
+			"bool",
+			"int",
+			"float",
+			"string",
+			"list",
+			"map",
+			"function"
+		};
+
+		std::string typeName;
+		bool customType = false;
+
+		if (data->type == DataType::Map)
+		{
+			Value<Map>* map = dynamic_cast<Value<Map>*>(data);
+			if (map->valuePtr->count("__type__") != 0)
+			{
+				Data* val = map->valuePtr->at("__type__");
+				if (val->type == DataType::String)
+				{
+					Value<String>* type_str = dynamic_cast<Value<String>*>(val);
+					typeName = *type_str->valuePtr;
+					customType = true;
+				}
+			}
+		}
+		
+		if (!customType)
+		{
+			int index = (int)data->type;
+			typeName = typeNames[index];
+		}
+
+		Value<String>* str_val = new Value<String>(DataType::String, false, data->token);
+		str_val->SetValue(typeName);
+		self->returnValue = str_val;
+	}
+
 	static void F_ToString(Function* self)
 	{
 		if (!self->CheckArgumens(1))
@@ -1409,9 +1486,14 @@ struct FunctionLibrary
 			Value<Float>* f = dynamic_cast<Value<Float>*>(data);
 			str = std::to_string(*f->valuePtr);
 		}
+		else if (data->type == DataType::String)
+		{
+			Value<String>* s = dynamic_cast<Value<String>*>(data);
+			str = *s->valuePtr;
+		}
 		else
 		{
-			data->token.sourceCodePtr->PrintError(data->token, "expected bool, int or float");
+			data->token.sourceCodePtr->PrintError(data->token, "expected bool, int, float or string");
 			return;
 		}
 
@@ -1941,6 +2023,7 @@ struct FunctionLibrary
 		{"push_ref", F_AddElementsAsReferences},
 		{"get_elem", F_GetElement},
 		{"rem_elem", F_RemoveElement},
+		{"has_key", F_HasKey},
 		{"def", F_DefineFunction},
 		{"get", F_GetVariable},
 		{"ref_func", F_GetFunctionReference},
@@ -1952,6 +2035,7 @@ struct FunctionLibrary
 		{"sub", F_Sub},
 		{"mult", F_Mult},
 		{"div", F_Div},
+		{"type_of", F_TypeOf},
 		{"to_string", F_ToString},
 		{"to_int", F_ToInt},
 		{"to_float", F_ToFloat},

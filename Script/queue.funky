@@ -3,6 +3,7 @@
 def("Queue" function(
 	map _obj
 	{
+		"__type__" "Queue"
 		"queue" list
 		"Push" method("_item" function(
 			_queue r= this["queue"];

@@ -1,0 +1,30 @@
+// requires #include "std_macros.funky"
+
+def("TMap" function(
+	map _obj
+	{
+		"__type__" "TMap"
+		"map" map
+		"Set" method("_key" "_val" function(
+			_map r= this["map"];
+			_map << to_string(._key) ._val;
+		))
+		"Get" method("_key" function(
+			_map r= this["map"];
+			return_ref(_map[to_string(._key)])
+		))
+		"Remove" method("_key" function(
+			_map r= this["map"];
+			rem_elem(._map to_string(._key))
+		))
+		"Contains" method("_key" function(
+			_map r= this["map"];
+			return_copy(has_key(._map to_string(._key)))
+		))
+		"Keys" method(function(
+			return_ref(keys(this["map"]))
+		))
+	}
+	
+	return_ref(._obj)
+))

@@ -24,7 +24,7 @@
             <Keywords name="Folders in comment, open"></Keywords>
             <Keywords name="Folders in comment, middle"></Keywords>
             <Keywords name="Folders in comment, close"></Keywords>
-            <Keywords name="Keywords1">do function print return_copy return_ref set_copy set_ref push_copy push_ref get_elem rem_elem def get ref_func lambda eval if while add sub mult div to_string to_int to_float less equal and or not count keys call_cpp</Keywords>
+            <Keywords name="Keywords1">do function print return_copy return_ref set_copy set_ref push_copy push_ref get_elem rem_elem has_key def get ref_func lambda eval if while add sub mult div type_of to_string to_int to_float less equal and or not count keys call_cpp</Keywords>
             <Keywords name="Keywords2">map list true false</Keywords>
             <Keywords name="Keywords3">#macro #include #log_expanded</Keywords>
             <Keywords name="Keywords4"></Keywords>

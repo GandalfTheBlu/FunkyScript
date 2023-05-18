@@ -3,6 +3,7 @@
 def("Stack" function(
 	map _obj
 	{
+		"__type__" "Stack"
 		"stack" list
 		"Push" method("_item" function(
 			_stack r= this["stack"];
