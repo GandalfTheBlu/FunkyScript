@@ -139,7 +139,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="data.cpp" />
     <ClCompile Include="entry.cpp" />
+    <ClCompile Include="script.cpp" />
+    <ClCompile Include="source_code.cpp" />
+    <ClCompile Include="value_types.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="data.h" />
+    <ClInclude Include="memory_pool.h" />
+    <ClInclude Include="script.h" />
+    <ClInclude Include="source_code.h" />
+    <ClInclude Include="value.h" />
+    <ClInclude Include="value_types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

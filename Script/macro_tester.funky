@@ -4,40 +4,20 @@
 do
 (
 	#include "stack.funky"
-	#include "queue.funky"
-	#include "tmap.funky"
 	
-	stack r= :Stack();
-	stack->Push(1)
-	stack->Push(2)
-	stack->Push(3)
-	print(.stack "\n")
+	stack = :Stack()
 	
+	print("push to stack (exit to stop):\n")
+	inp = ""
+	while([.inp != "exit"] do(
+		input(.inp)
+		if([.inp != "exit"] do(
+			stack->Push(.inp)
+		))
+	))
+	
+	print("stack:\n")
 	while([stack->Count() > 0] do(
 		print(stack->Pop() "\n")
 	))
-	
-	queue r= :Queue();
-	queue->Push(1)
-	queue->Push(2)
-	queue->Push(3)
-	print(.queue "\n")
-	
-	while([queue->Count() > 0] do(
-		print(queue->Pop() "\n")
-	))
-	
-	tmap r= :TMap();
-	tmap->Set("1" "val1")
-	tmap->Set(2 "val2")
-	tmap->Set(3.0 "val3")
-	print(.tmap "\n")
-	
-	print(tmap->Get(1) "\n")
-	print(tmap->Get("2") "\n")
-	print(tmap->Get(3.0) "\n")
-	print(tmap->Contains(1) "\n")
-	tmap->Remove("1")
-	print(tmap->Contains(1) "\n")
-	print(tmap->Keys() "\n")
 )

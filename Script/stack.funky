@@ -6,12 +6,12 @@ def("Stack" function(
 		"__type__" "Stack"
 		"stack" list
 		"Push" method("_item" function(
-			_stack r= this["stack"];
-			_stack << ._item;
+			_stack r= this["stack"]
+			_stack << ._item
 		))
 		"Pop" method(function(
-			_stack r= this["stack"];
-			_item r= _stack[-1];
+			_stack r= this["stack"]
+			_item r= _stack[-1]
 			rem_elem(._stack -1)
 			return_ref(._item)
 		))

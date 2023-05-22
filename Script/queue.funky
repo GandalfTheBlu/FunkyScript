@@ -6,12 +6,12 @@ def("Queue" function(
 		"__type__" "Queue"
 		"queue" list
 		"Push" method("_item" function(
-			_queue r= this["queue"];
-			_queue << ._item;
+			_queue r= this["queue"]
+			_queue << ._item
 		))
 		"Pop" method(function(
-			_queue r= this["queue"];
-			_item r= _queue[0];
+			_queue r= this["queue"]
+			_item r= _queue[0]
 			rem_elem(._queue 0)
 			return_ref(._item)
 		))
