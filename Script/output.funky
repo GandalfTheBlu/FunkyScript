@@ -2,42 +2,24 @@
 
 do
 (
-	
-
-def("Stack" function(
-	set_copy("_obj" map) push_copy(get("_obj") 
-		"__type__" "Stack"
-		"stack" list
-		"Push" lambda("this" "_item" function(
-			set_ref("_stack" get_elem(get("this") "stack"))
-			push_copy(get("_stack") get("_item"))
+	set_copy("grid" list)
+	set_copy("i" 1)
+	while(or(less(get("i") 10) equal(get("i") 10)) do(
+		set_copy("col" list)
+		push_ref(get("grid") get("col"))
+		set_copy("j" 1)
+		while(or(less(get("j") 10) equal(get("j") 10)) do(
+			push_copy(get("col") mult(get("i") get("j")))
+			set_copy("j" add(get("j") 1))
 		))
-		"Pop" lambda("this" function(
-			set_ref("_stack" get_elem(get("this") "stack"))
-			set_ref("_item" get_elem(get("_stack") -1))
-			rem_elem(get("_stack") -1)
-			return_ref(get("_item"))
-		))
-		"Count" lambda("this" function(
-			return_copy(count(get_elem(get("this") "stack")))
-		))
-	)
-	
-	return_ref(get("_obj"))
-))	
-	set_copy("stack" get("Stack" ))
-	
-	print("push to stack (exit to stop):\n")
-	set_copy("inp" "")
-	while(not(equal(get("inp") "exit")) do(
-		input(get("inp"))
-		if(not(equal(get("inp") "exit")) do(
-			eval(get_elem(get("stack") "Push") get("stack") get("inp"))
-		))
+		set_copy("i" add(get("i") 1))
 	))
 	
-	print("stack:\n")
-	while(less(0 eval(get_elem(get("stack") "Count") get("stack") )) do(
-		print(eval(get_elem(get("stack") "Pop") get("stack") ) "\n")
+	set_copy("_i_col" 0) while(less(get("_i_col") count(get("grid"))) do(set_ref("col" get_elem(get("grid") get("_i_col"))) set_copy("_i_col" add(get("_i_col") 1)) 
+		print(get("col") "\n")
 	))
+	
+	set_copy("i" 1) while(or(less(get("i") 10) equal(get("i") 10)) do(
+		print(get("i") "\n")
+	 set_copy("i" add(get("i") 1))))
 )

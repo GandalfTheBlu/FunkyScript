@@ -5,6 +5,8 @@
 #macro method\( lambda("this" 
 #macro list\s($name)\s*\{($any)\} set_copy("$1" list) push_copy(get("$1") $2)
 #macro map\s($name)\s*\{($any)\} set_copy("$1" map) push_copy(get("$1") $2)
+#macro for\(($name)\sin\s($name)\)\s*\{($any)\} set_copy("_i_$1" 0) while(less(get("_i_$1") count(get("$2"))) do(set_ref("$1" get_elem(get("$2") get("_i_$1"))) set_copy("_i_$1" add(get("_i_$1") 1)) $3))
+#macro for\(($name)\s\in\s\[(.*?)\sto\s(.*?)\]\)\s*\{($any)\} set_copy("$1" $2) while(or(less(get("$1") $3) equal(get("$1") $3)) do($4 set_copy("$1" add(get("$1") 1))))
 
 #macro ($name)\s\=\s(.*) set_copy("$1" $2)
 #macro ($name)\sr\=\s(.*) set_ref("$1" $2)
