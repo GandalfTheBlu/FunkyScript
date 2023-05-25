@@ -75,12 +75,10 @@ description:
 
 -- GET --
 syntax:
-	get(variable_name argument1 argument2 ...)
+	get(variable_name)
 	
 description:
 	* gets a variable by name (string value)
-	* if the variable is of type function, optional arguments can be 
-	  passed and the function will be evaluated
 	  
 	  
 -- PUSH_COPY --

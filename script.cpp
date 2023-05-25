@@ -683,27 +683,8 @@ void FunctionLibrary::F_GetVariable(Function* self)
 		return;
 	}
 
-	if (var->type == DataType::Function)
-	{
-		Value<Function>* func = dynamic_cast<Value<Function>*>(var);
-		for (int i = 0; i + 1 < self->arguments.size() && i < func->valuePtr->parameterNames.size(); i++)
-		{
-			Data* arg = self->arguments[i + 1]->Evaluate();
-			AFFIRM_DATA(arg)
-
-				Data* argRef = nullptr;
-			arg->CreateSameType(argRef);
-			argRef->ReferenceOther(arg);
-			func->valuePtr->AddVariable(func->valuePtr->parameterNames[i], argRef);
-		}
-	}
-
-	Data* res = var->Evaluate();
-	if (res == nullptr)
-		return;
-
-	res->CreateSameType(self->returnValue);
-	self->returnValue->ReferenceOther(res);
+	var->CreateSameType(self->returnValue);
+	self->returnValue->ReferenceOther(var);
 }
 
 void FunctionLibrary::F_GetFunctionReference(Function* self)

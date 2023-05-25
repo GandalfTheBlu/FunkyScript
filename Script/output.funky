@@ -2,24 +2,45 @@
 
 do
 (
-	set_copy("grid" list)
-	set_copy("i" 1)
-	while(or(less(get("i") 10) equal(get("i") 10)) do(
-		set_copy("col" list)
-		push_ref(get("grid") get("col"))
-		set_copy("j" 1)
-		while(or(less(get("j") 10) equal(get("j") 10)) do(
-			push_copy(get("col") mult(get("i") get("j")))
-			set_copy("j" add(get("j") 1))
-		))
-		set_copy("i" add(get("i") 1))
+	set_copy("m" map) push_copy(get("m") 
+		"key1" "val1"
+		"key2" "val2"
+	)
+	
+	set_ref("_keys_key" keys(get("m"))) set_copy("_i_key" 0) while(less(get("_i_key") count(get("_keys_key"))) do(set_ref("key" get_elem(get("_keys_key") get("_i_key"))) set_ref("val" get_elem(get("m") get("key"))) set_copy("_i_key" add(get("_i_key") 1)) 
+		print(get("key") " " get("val") "\n")
 	))
 	
-	set_copy("_i_col" 0) while(less(get("_i_col") count(get("grid"))) do(set_ref("col" get_elem(get("grid") get("_i_col"))) set_copy("_i_col" add(get("_i_col") 1)) 
-		print(get("col") "\n")
+	set_copy("l" list) push_copy(get("l") 
+		"item1"
+		"item2"
+		"item3"
+	)
+	
+	set_copy("_i_item" 0) while(less(get("_i_item") count(get("l"))) do(set_ref("item" get_elem(get("l") get("_i_item"))) set_copy("_i_item" add(get("_i_item") 1)) 
+		print(get("item") "\n")
 	))
 	
 	set_copy("i" 1) while(or(less(get("i") 10) equal(get("i") 10)) do(
 		print(get("i") "\n")
 	 set_copy("i" add(get("i") 1))))
+	
+	set_copy("obj" map) push_copy(get("obj") 
+		"name" : "Grug"
+		"SayName" lambda("this" function(
+			print("My name is " get_elem(get("this") "name") "\n")
+		))
+	)
+	
+	eval(get_elem(get("obj") "SayName") get("obj") )
+	
+	set_ref("_keys_prop_name" keys(get("obj"))) set_copy("_i_prop_name" 0) while(less(get("_i_prop_name") count(get("_keys_prop_name"))) do(set_ref("prop_name" get_elem(get("_keys_prop_name") get("_i_prop_name"))) set_ref("prop_val" get_elem(get("obj") get("prop_name"))) set_copy("_i_prop_name" add(get("_i_prop_name") 1)) 
+		print(get("prop_name") " " get("prop_val") "\n")
+	))
+	
+	def("func" function(
+		print("hello there!\n")
+	))
+	
+	eval(get("func") )
 )
